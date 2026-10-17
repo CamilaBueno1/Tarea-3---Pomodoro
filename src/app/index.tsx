@@ -1,98 +1,366 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { CotopaxiColors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { usePomodoroSession } from '@/hooks/use-pomodoro-session';
+import type { PomodoroPhase } from '@/domain/pomodoro-session';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
+const phaseNames: Record<PomodoroPhase, string> = {
+  study: 'Estudio',
+  shortBreak: 'Descanso corto',
+  longBreak: 'Descanso largo',
+};
+
+export default function HomeScreen() {
+  const timer = usePomodoroSession();
+  const [hasExplainedNotificationPermission, setHasExplainedNotificationPermission] =
+    useState(false);
+
+  if (timer.status === 'loading') {
+    return <StatusMessage message="Cargando tu sesión…" />;
   }
-  if (Device.isDevice) {
+
+  if (timer.status === 'error' || timer.session === null) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <StatusMessage
+        message="No se pudo restaurar la sesión guardada."
+        error={timer.error?.message}
+      />
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
+  const { session } = timer;
+  const phaseStatus =
+    session.status === 'ready'
+      ? session.lastCompletedPhase
+        ? `${phaseNames[session.lastCompletedPhase]} terminado. ${phaseNames[session.phase]} listo`
+        : `${phaseNames[session.phase]} listo`
+      : session.status === 'running'
+        ? `${phaseNames[session.phase]} en marcha`
+        : `${phaseNames[session.phase]} pausado`;
+
+  function startWithPermissionExplanation() {
+    if (
+      timer.notificationPermissionGranted ||
+      hasExplainedNotificationPermission
+    ) {
+      void timer.start();
+      return;
+    }
+
+    Alert.alert(
+      'Avisos del temporizador',
+      'Cotopaxi Focus puede mostrar un aviso local cuando termine esta fase. Puedes iniciar sin avisos o permitir las notificaciones.',
+      [
+        {
+          text: 'Iniciar sin avisos',
+          style: 'cancel',
+          onPress: () => {
+            setHasExplainedNotificationPermission(true);
+            void timer.start();
+          },
+        },
+        {
+          text: 'Permitir avisos',
+          onPress: () => {
+            setHasExplainedNotificationPermission(true);
+            void (async () => {
+              const granted = await timer.requestPermission();
+              await timer.start(granted);
+            })();
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  }
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        alwaysBounceVertical={false}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.eyebrow}>ACADEMIA COTOPAXI</Text>
+            <Text style={styles.title}>Temporizador Pomodoro</Text>
+          </View>
+
+          <View style={styles.timerCard}>
+            <Text style={styles.phaseName}>{phaseNames[session.phase]}</Text>
+            <Text accessibilityLiveRegion="polite" style={styles.statusMessage}>
+              {phaseStatus}
+            </Text>
+            <Text
+              accessibilityLabel={`Tiempo restante ${timer.formattedRemainingTime}`}
+              adjustsFontSizeToFit
+              numberOfLines={1}
+              style={styles.time}>
+              {timer.formattedRemainingTime}
+            </Text>
+            <Text style={styles.progress}>
+              Pomodoros completados: {session.completedPomodoros} de{' '}
+              {session.cycleTarget}
+            </Text>
+
+            {timer.error ? (
+              <Text accessibilityRole="alert" style={styles.errorMessage}>
+                No se pudo guardar la sesión. {timer.error.message}
+              </Text>
+            ) : null}
+            {timer.notificationError ? (
+              <Text accessibilityRole="alert" style={styles.errorMessage}>
+                No se pudo programar el aviso. La cuenta seguirá funcionando.
+              </Text>
+            ) : null}
+            {timer.notificationPermissionGranted === false ? (
+              <Text style={styles.permissionMessage}>
+                Avisos desactivados. La cuenta continuará sin notificaciones.
+              </Text>
+            ) : null}
+
+            <View style={styles.controls}>
+              {session.status === 'ready' ? (
+                <TimerButton
+                  label={`Iniciar ${phaseNames[session.phase].toLowerCase()}`}
+                  title="Iniciar"
+                  onPress={startWithPermissionExplanation}
+                />
+              ) : null}
+              {session.status === 'running' ? (
+                <TimerButton
+                  label="Pausar temporizador"
+                  title="Pausar"
+                  onPress={() => void timer.pause()}
+                />
+              ) : null}
+              {session.status === 'paused' ? (
+                <TimerButton
+                  label="Reanudar temporizador"
+                  title="Reanudar"
+                  onPress={() => void timer.resume()}
+                />
+              ) : null}
+              {session.status !== 'ready' ? (
+                <TimerButton
+                  destructive
+                  label="Reiniciar temporizador"
+                  title="Reiniciar"
+                  onPress={() =>
+                    Alert.alert(
+                      'Reiniciar temporizador',
+                      'El tiempo restante volverá a la duración inicial de esta fase.',
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                          text: 'Reiniciar',
+                          style: 'destructive',
+                          onPress: () => {
+                            void timer.restart();
+                          },
+                        },
+                      ],
+                      { cancelable: true },
+                    )
+                  }
+                />
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-export default function HomeScreen() {
+function StatusMessage({
+  message,
+  error,
+}: {
+  message: string;
+  error?: string;
+}) {
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.statusContainer}>
+        {error ? null : (
+          <ActivityIndicator
+            color={CotopaxiColors.navy}
+            accessibilityLabel="Cargando sesión"
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        )}
+        <Text
+          accessibilityRole="alert"
+          style={[styles.statusMessage, error && styles.errorMessage]}>
+          {message}
+        </Text>
+        {error ? <Text style={styles.errorDetails}>{error}</Text> : null}
+      </View>
+    </SafeAreaView>
+  );
+}
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+function TimerButton({
+  label,
+  title,
+  onPress,
+  destructive = false,
+}: {
+  label: string;
+  title: string;
+  onPress: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        destructive ? styles.destructiveButton : styles.button,
+        pressed && styles.buttonPressed,
+      ]}>
+      <Text
+        style={[
+          styles.buttonText,
+          destructive && styles.destructiveButtonText,
+        ]}>
+        {title}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: CotopaxiColors.background,
   },
-  heroSection: {
-    alignItems: 'center',
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
+    padding: Spacing.four,
+  },
+  content: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     gap: Spacing.four,
   },
+  header: {
+    borderRadius: Spacing.three,
+    backgroundColor: CotopaxiColors.navy,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+    gap: Spacing.two,
+  },
+  eyebrow: {
+    color: CotopaxiColors.white,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+  },
   title: {
+    color: CotopaxiColors.white,
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  timerCard: {
+    alignItems: 'center',
+    borderColor: CotopaxiColors.border,
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    backgroundColor: CotopaxiColors.white,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.five,
+    gap: Spacing.four,
+  },
+  phaseName: {
+    color: CotopaxiColors.navy,
+    fontSize: 22,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
+  statusMessage: {
+    color: CotopaxiColors.secondaryText,
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  stepContainer: {
+  time: {
+    color: CotopaxiColors.navy,
+    fontVariant: ['tabular-nums'],
+    fontSize: 72,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  progress: {
+    color: CotopaxiColors.secondaryText,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  permissionMessage: {
+    color: CotopaxiColors.secondaryText,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    color: CotopaxiColors.destructive,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  controls: {
+    width: '100%',
+    gap: Spacing.two,
+  },
+  button: {
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Spacing.two,
+    backgroundColor: CotopaxiColors.gold,
+    paddingHorizontal: Spacing.four,
+  },
+  destructiveButton: {
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Spacing.two,
+    backgroundColor: CotopaxiColors.destructive,
+    paddingHorizontal: Spacing.four,
+  },
+  buttonPressed: {
+    borderWidth: 2,
+    borderColor: CotopaxiColors.navy,
+  },
+  buttonText: {
+    color: CotopaxiColors.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  destructiveButtonText: {
+    color: CotopaxiColors.white,
+  },
+  statusContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+    padding: Spacing.four,
+  },
+  errorDetails: {
+    color: CotopaxiColors.secondaryText,
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

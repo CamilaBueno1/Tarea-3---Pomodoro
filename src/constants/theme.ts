@@ -24,6 +24,18 @@ export const Colors = {
   },
 } as const;
 
+export const CotopaxiColors = {
+  navy: '#0A1931',
+  white: '#FFFFFF',
+  gold: '#E6B800',
+  text: '#111111',
+  destructive: '#DC2626',
+  success: '#10B981',
+  background: '#F9FAFB',
+  secondaryText: '#4B5563',
+  border: '#E5E7EB',
+} as const;
+
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({

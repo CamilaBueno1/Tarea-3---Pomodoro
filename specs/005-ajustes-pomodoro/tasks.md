@@ -16,38 +16,38 @@ Las tareas están aprobadas y se ejecutarán secuencialmente.
   RF-2, RF-3, RF-4.
   Hecho cuando: las pruebas de T1 pasan para los cuatro campos, las reglas
   están aisladas de React Native y almacenamiento, y Jest pasa.
-- [x] **T3. Declarar e instalar la dependencia de almacenamiento autorizada.**
+- [x] **T3. Declarar e instalar las dependencias Expo autorizadas.**
   RF-5, RF-10.
-  Hecho cuando: `@react-native-async-storage/async-storage`, autorizado para
-  esta historia, queda disponible en el proyecto y el manifiesto/lockfile se
-  actualizan.
+  Hecho cuando: `@react-native-async-storage/async-storage` queda disponible y
+  el manifiesto/lockfile se actualizan. También se instala `expo-image`,
+  autorizado para reparar imports del scaffold que bloqueaban el type-check.
 - [x] **T4. Escribir pruebas del adaptador de almacenamiento.** RF-5, RF-10.
   Hecho cuando: pruebas Jest con almacenamiento simulado cubren lectura,
   escritura y fallos, y fallan antes de existir el adaptador.
-- [ ] **T5. Implementar el adaptador local de ajustes.** RF-5, RF-10.
+- [x] **T5. Implementar el adaptador local de ajustes.** RF-5, RF-10.
   Hecho cuando: el adaptador persiste solo los cuatro valores configurados,
   propaga fallos para que puedan mostrarse y pasan las pruebas de T4.
   Depende de T2, T3 y T4.
-- [ ] **T6. Escribir pruebas del proveedor compartido de ajustes.** RF-4, RF-5,
+- [x] **T6. Escribir pruebas del proveedor compartido de ajustes.** RF-4, RF-5,
   RF-6, RF-7, RF-10.
   Hecho cuando: Jest cubre carga inicial, publicación solo tras escritura
   exitosa, error de lectura/escritura y actualización del valor consumible;
   las pruebas fallan antes del proveedor. RF-7 requiere además la integración
   pendiente de HU-002.
-- [ ] **T7. Implementar el proveedor compartido y conectarlo al layout.**
+- [x] **T7. Implementar el proveedor compartido y conectarlo al layout.**
   RF-4, RF-5, RF-6, RF-7, RF-10, RF-11.
   Hecho cuando: rutas de temporizador y ajustes consultan el mismo estado,
   valores predeterminados se muestran ante configuración inicial vacía, los
   fallos se exponen y las pruebas de T6 pasan. La prueba integral de objetivo
   de ciclo queda pendiente de HU-002.
   Depende de T2, T5 y T6.
-- [ ] **T8. Escribir pruebas de la pantalla y la segunda pestaña.** RF-1 a
+- [x] **T8. Escribir pruebas de la pantalla y la segunda pestaña.** RF-1 a
   RF-5, RF-8, RF-9, RF-11.
   Hecho cuando: React Native Testing Library verifica campos, validaciones,
   confirmaciones, cancelaciones, accesibilidad y la pestaña «Ajustes», y
   detecta fallos antes de implementar la pantalla.
   Depende de T7.
-- [ ] **T9. Implementar la pantalla Ajustes y conectar la segunda pestaña.**
+- [x] **T9. Implementar la pantalla Ajustes y conectar la segunda pestaña.**
   RF-1 a RF-5, RF-8 a RF-11.
   Hecho cuando: la interfaz española permite guardar y restablecer con
   confirmación, rechaza y señala valores inválidos, el teclado no tapa acciones,

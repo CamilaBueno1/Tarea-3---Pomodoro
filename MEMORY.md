@@ -2,15 +2,14 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 
 ## Estado actual
-- La spec `specs/001-temporizador-estudio/spec.md` para HU-001 fue aprobada;
-  el plan técnico y `specs/001-temporizador-estudio/tasks.md` están aprobados.
-- T1 a T6 están completadas; las pruebas de T6 fallan en la pantalla de
-  plantilla como corresponde antes de T7.
-- HU-005 está aprobada en `specs/005-ajustes-pomodoro/`; se aprobó su plan y
-  tareas para proveer configuración persistente real al temporizador.
-- HU-005 T1–T2 están completadas; las pruebas del modelo y límites pasan.
-- HU-005 T3–T4 están completadas; AsyncStorage quedó instalado y las pruebas
-  del adaptador fallan antes de su implementación.
+- HU-001 y HU-005 tienen implementación y verificaciones automatizadas
+  completadas; sus pruebas manuales en dispositivo siguen pendientes.
+- HU-002 T1–T6 y HU-003 T1–T8 están completadas; sus tareas de verificación
+  manual en Android siguen pendientes.
+- `npx jest --runInBand` pasa (10 suites, 87 pruebas), igual que
+  `npx tsc --noEmit` y `npx expo export --platform web`.
+- El APK debug Android compila; `adb devices` no reporta dispositivos para
+  completar las pruebas manuales.
 
 ## Decisiones (y por qué)
 - (vacío por ahora)
@@ -19,4 +18,5 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - (vacío por ahora)
 
 ## Próximos pasos
-- Continuar HU-005 T5 con `/sdd-implement 005-ajustes-pomodoro --task 5`.
+- Completar las verificaciones manuales Android pendientes; continuar con
+  `/sdd-implement 003-hu003-persistencia-segundoplano --task 9`.

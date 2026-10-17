@@ -42,19 +42,20 @@ HU: [HU-001](../../docs/historias/HU-001.md)
   de accesibilidad; las pruebas fallan para la pantalla de plantilla antes de
   implementarla. Las pruebas dirigidas fallan con la pantalla de plantilla,
   como se esperaba antes de T7.
-- [ ] **T7. Reemplazar la pantalla principal con la interfaz del temporizador.**
+- [x] **T7. Reemplazar la pantalla principal con la interfaz del temporizador.**
   RF-1, RF-2, RF-3, RF-4. Depende también de la configuración real de HU-005
   (spec 005, T7: proveedor compartido cargado desde persistencia local).
   Hecho cuando: se muestra el tiempo y controles correspondientes al estado,
   todo texto visible está en español y los controles usan áreas seguras,
   `StyleSheet`, contraste de marca y etiquetas accesibles; pasan las pruebas
   de T6 y `npx tsc --noEmit`.
-- [ ] **T8. Escribir pruebas de confirmación y cancelación del reinicio.**
+- [x] **T8. Escribir pruebas de confirmación y cancelación del reinicio.**
   RF-5, RF-6, D-001.
   Hecho cuando: pruebas de pantalla cubren confirmar, cancelar y descartar el
   diálogo, para estados corriendo y pausado, verificando que cancelar/descartar
-  no cambian tiempo ni estado.
-- [ ] **T9. Implementar la confirmación del reinicio en la interfaz.** RF-5,
+  no cambian tiempo ni estado. Las pruebas dirigidas fallan antes de T9
+  porque todavía no existe el control de reinicio.
+- [x] **T9. Implementar la confirmación del reinicio en la interfaz.** RF-5,
   RF-6, D-001.
   Hecho cuando: el diálogo del sistema precede al reinicio; confirmar restaura
   el tiempo inicial conservando el estado previo, cancelar o descartar deja

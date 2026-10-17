@@ -39,9 +39,10 @@ Las rutas y responsabilidades siguientes forman parte del plan aprobado.
 | `src/app/settings.tsx` (nuevo) | Pantalla de ajustes, campos numéricos, errores de validación, confirmación de guardado/restablecimiento y manejo de carga/error. | RF-1 a RF-5, RF-8 a RF-11 |
 | `src/app/__tests__/settings.test.tsx` (nuevo) | Pruebas de formulario, límites, confirmaciones, cancelaciones, estado persistido y accesibilidad. | RF-1 a RF-5, RF-8 a RF-11 |
 | `src/components/app-tabs.tsx` y `src/components/app-tabs.web.tsx` (existentes) | Reemplazar el segundo destino/etiqueta de plantilla «Explore» por la ruta y etiqueta «Ajustes»; preservar las dos plataformas que ya tienen navegación diferenciada. | RF-11 |
+| `src/app/explore.tsx` (existente) | Redirigir la ruta de plantilla anterior a Ajustes para que Expo Router no empaquete referencias a assets ausentes del scaffold. | RF-11 |
 | `src/app/index.tsx` y `src/hooks/use-study-timer.ts` (existentes) | Consumir la duración configurada para nuevos inicios, sin reemplazar el tiempo inicial de un temporizador ya iniciado. No introducir una duración fija. | RF-1, RF-6 |
 | Integración de ciclo HU-002 (no existe en el alcance revisado) | Consumir el objetivo capturado al inicio del ciclo vigente y el nuevo valor al iniciar el siguiente. Se planificará/validará con HU-002. | RF-2, RF-7 |
-| `tsconfig.json` y `package.json` (existentes) | Resolver alias de `src/` y habilitar el preset Jest Expo requerido por las pruebas de React Native. | Validación |
+| `tsconfig.json`, `package.json`, `app.json` y `src/styles.d.ts` (existentes/nuevo) | Resolver alias de `src/`, habilitar el preset Jest Expo, declarar imports CSS y registrar los módulos Expo aprobados. | Validación |
 
 ## Dominio puro
 
@@ -199,6 +200,8 @@ valores y que los siguientes adoptan los nuevos.
 - El proyecto no configura el preset Jest Expo ni el alias `@/` para el
   directorio `src/`; ambos ajustes son necesarios para resolver las rutas y
   ejecutar las pruebas aprobadas.
+- Los imports del scaffold existente requieren `expo-image`; su instalación
+  fue autorizada para permitir el type-check y la compilación.
 - El temporizador HU-001 tiene un hook que recibe una duración inicial, pero la
   pantalla actual es de plantilla. T7 de
   `specs/001-temporizador-estudio/tasks.md` debe esperar a que HU-005 ofrezca
