@@ -6,6 +6,7 @@ import type { PomodoroPhase } from "../domain/pomodoro-session";
 
 const STUDY_END_NOTIFICATION_ID_KEY = "@cotopaxi/study-end-notification-id";
 const STUDY_NOTIFICATION_CHANNEL_ID = "pomodoro-phase-end";
+const STUDY_NOTIFICATION_VIBRATION_PATTERN = [0, 250, 250, 250];
 
 const phaseMessages: Record<PomodoroPhase, { title: string; body: string }> = {
   study: {
@@ -26,8 +27,9 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
-    shouldPlaySound: false,
+    shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldVibrate: true,
   }),
 });
 
@@ -41,6 +43,8 @@ async function configureAndroidChannel(): Promise<void> {
     {
       name: "Fin de fase Pomodoro",
       importance: Notifications.AndroidImportance.DEFAULT,
+      vibrationPattern: STUDY_NOTIFICATION_VIBRATION_PATTERN,
+      sound: "default",
     },
   );
 }
@@ -102,6 +106,8 @@ export async function scheduleStudyEndNotification(
       title: message.title,
       body: message.body,
       data: { phase },
+      sound: "default",
+      vibrate: STUDY_NOTIFICATION_VIBRATION_PATTERN,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,

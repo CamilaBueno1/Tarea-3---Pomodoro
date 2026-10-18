@@ -5,9 +5,11 @@ import { CotopaxiColors } from '@/constants/theme';
 export default function AppTabs() {
   return (
     <NativeTabs
-      backgroundColor={CotopaxiColors.navy}
+      backgroundColor={CotopaxiColors.background}
       indicatorColor={CotopaxiColors.gold}
-      labelStyle={{ selected: { color: CotopaxiColors.white } }}>
+      labelStyle={{
+        selected: { color: CotopaxiColors.navy },
+      }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Temporizador</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="timer" md="timer" />

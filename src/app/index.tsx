@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +11,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CotopaxiColors, MaxContentWidth, Spacing } from '@/constants/theme';
+import {
+  CotopaxiColors,
+  Fonts,
+  MaxContentWidth,
+  Spacing,
+} from '@/constants/theme';
 import { usePomodoroSession } from '@/hooks/use-pomodoro-session';
 import type { PomodoroPhase } from '@/domain/pomodoro-session';
 
@@ -249,63 +255,65 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: Spacing.four,
+    paddingBottom: Platform.OS === 'web' ? 112 : Spacing.four,
   },
   content: {
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    gap: Spacing.four,
+    gap: Spacing.five,
   },
   header: {
-    borderRadius: Spacing.three,
-    backgroundColor: CotopaxiColors.navy,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    gap: Spacing.two,
+    paddingHorizontal: Spacing.one,
+    gap: Spacing.one,
   },
   eyebrow: {
-    color: CotopaxiColors.white,
-    fontSize: 13,
+    color: CotopaxiColors.secondaryText,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 1.4,
+    letterSpacing: 2,
   },
   title: {
-    color: CotopaxiColors.white,
-    fontSize: 24,
+    color: CotopaxiColors.navy,
+    fontSize: 28,
     fontWeight: '700',
   },
   timerCard: {
     alignItems: 'center',
-    borderColor: CotopaxiColors.border,
-    borderRadius: Spacing.three,
-    borderWidth: 1,
+    borderRadius: 32,
     backgroundColor: CotopaxiColors.white,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: Spacing.five,
     paddingVertical: Spacing.five,
     gap: Spacing.four,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
   },
   phaseName: {
     color: CotopaxiColors.navy,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     textAlign: 'center',
   },
   statusMessage: {
     color: CotopaxiColors.secondaryText,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
   },
   time: {
     color: CotopaxiColors.navy,
     fontVariant: ['tabular-nums'],
-    fontSize: 72,
+    fontFamily: Fonts.mono,
+    fontSize: 84,
     fontWeight: '700',
     textAlign: 'center',
   },
   progress: {
     color: CotopaxiColors.secondaryText,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -324,18 +332,23 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   button: {
-    minHeight: 56,
+    minHeight: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Spacing.two,
+    borderRadius: 30,
     backgroundColor: CotopaxiColors.gold,
     paddingHorizontal: Spacing.four,
+    shadowColor: CotopaxiColors.gold,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 3,
   },
   destructiveButton: {
     minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Spacing.two,
+    borderRadius: 28,
     backgroundColor: CotopaxiColors.destructive,
     paddingHorizontal: Spacing.four,
   },
@@ -345,7 +358,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: CotopaxiColors.text,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
   },
   destructiveButtonText: {

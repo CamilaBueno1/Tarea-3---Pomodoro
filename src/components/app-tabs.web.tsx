@@ -14,13 +14,13 @@ export default function AppTabs() {
   return (
     <Tabs>
       <TabSlot style={styles.tabSlot} />
-      <TabList asChild style={styles.tabButtons}>
+      <TabList asChild style={styles.tabBar}>
         <SafeAreaView edges={['bottom']} style={styles.tabBar}>
           <TabTrigger name="index" href="/" asChild>
-            <TabButton>Temporizador</TabButton>
+            <TabButton icon="◷">Temporizador</TabButton>
           </TabTrigger>
           <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton>Ajustes</TabButton>
+            <TabButton icon="⚙">Ajustes</TabButton>
           </TabTrigger>
         </SafeAreaView>
       </TabList>
@@ -31,14 +31,18 @@ export default function AppTabs() {
 function TabButton({
   children,
   isFocused,
+  icon,
   ...props
-}: TabTriggerSlotProps) {
+}: TabTriggerSlotProps & { icon: string }) {
   return (
     <Pressable
       {...props}
       accessibilityRole="tab"
       accessibilityState={{ selected: isFocused }}
       style={[styles.tabButton, isFocused && styles.selectedTabButton]}>
+      <Text style={[styles.tabIcon, isFocused && styles.selectedTabLabel]}>
+        {icon}
+      </Text>
       <Text style={[styles.tabLabel, isFocused && styles.selectedTabLabel]}>
         {children}
       </Text>
@@ -52,31 +56,42 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     position: 'absolute',
-    bottom: 0,
+    bottom: Spacing.two,
     width: '100%',
-    alignItems: 'center',
-    backgroundColor: CotopaxiColors.navy,
-  },
-  tabButtons: {
+    maxWidth: 360,
+    alignSelf: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
+    gap: Spacing.one,
+    padding: Spacing.one,
+    borderRadius: 28,
+    backgroundColor: CotopaxiColors.white,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
   },
   tabButton: {
-    minHeight: 48,
-    minWidth: 140,
+    minHeight: 52,
+    minWidth: 148,
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    gap: Spacing.two,
+    borderRadius: 24,
+    paddingHorizontal: Spacing.four,
   },
   selectedTabButton: {
     backgroundColor: CotopaxiColors.gold,
   },
+  tabIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
   tabLabel: {
-    color: CotopaxiColors.white,
+    color: CotopaxiColors.secondaryText,
     fontSize: 15,
     fontWeight: '600',
   },

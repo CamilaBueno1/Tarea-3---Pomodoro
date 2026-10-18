@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { PermissionStatus } from "expo-modules-core";
+import { Platform } from "react-native";
 
 import {
   cancelStudyEndNotification,
@@ -38,6 +39,9 @@ const mockRequestPermissions = jest.mocked(
 );
 const mockScheduleNotification = jest.mocked(
   Notifications.scheduleNotificationAsync,
+);
+const mockSetNotificationChannel = jest.mocked(
+  Notifications.setNotificationChannelAsync,
 );
 const mockCancelNotification = jest.mocked(
   Notifications.cancelScheduledNotificationAsync,
@@ -89,21 +93,42 @@ describe("study end notifications", () => {
   });
 
   it("schedules a notification with the phase and absolute end timestamp", async () => {
-    const endsAt = Date.now() + 1_800_000;
-    await scheduleStudyEndNotification("shortBreak", endsAt);
+    const originalPlatform = Platform.OS;
+    Platform.OS = "android";
 
-    expect(mockScheduleNotification).toHaveBeenCalledWith({
-      content: {
-        title: "Descanso corto terminado",
-        body: "Tu descanso corto terminó. Puedes volver al estudio.",
-        data: { phase: "shortBreak" },
-      },
-      trigger: { type: "date", date: new Date(endsAt) },
-    });
-    expect(mockSetItem).toHaveBeenCalledWith(
-      expect.any(String),
-      "notification-id",
-    );
+    try {
+      const endsAt = Date.now() + 1_800_000;
+      await scheduleStudyEndNotification("shortBreak", endsAt);
+
+      expect(mockScheduleNotification).toHaveBeenCalledWith({
+        content: {
+          title: "Descanso corto terminado",
+          body: "Tu descanso corto terminó. Puedes volver al estudio.",
+          data: { phase: "shortBreak" },
+          sound: "default",
+          vibrate: [0, 250, 250, 250],
+        },
+        trigger: {
+          type: "date",
+          date: new Date(endsAt),
+          channelId: "pomodoro-phase-end",
+        },
+      });
+      expect(mockSetNotificationChannel).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          importance: 3,
+          vibrationPattern: [0, 250, 250, 250],
+          sound: "default",
+        }),
+      );
+      expect(mockSetItem).toHaveBeenCalledWith(
+        expect.any(String),
+        "notification-id",
+      );
+    } finally {
+      Platform.OS = originalPlatform;
+    }
   });
 
   it("replaces and cancels only the scheduled study notification", async () => {
