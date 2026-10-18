@@ -1,12 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 import type { PomodoroPhase } from "../domain/pomodoro-session";
 
+type NotificationsModule = typeof import("expo-notifications");
+type NotificationPermissionsStatus =
+  import("expo-notifications").NotificationPermissionsStatus;
+
 const STUDY_END_NOTIFICATION_ID_KEY = "@cotopaxi/study-end-notification-id";
-const STUDY_NOTIFICATION_CHANNEL_ID = "pomodoro-phase-end";
+const STUDY_NOTIFICATION_CHANNEL_ID = "pomodoro-phase-end-high";
 const STUDY_NOTIFICATION_VIBRATION_PATTERN = [0, 250, 250, 250];
+let notificationsModulePromise: Promise<NotificationsModule | null> | null =
+  null;
 
 const phaseMessages: Record<PomodoroPhase, { title: string; body: string }> = {
   study: {
@@ -23,26 +29,48 @@ const phaseMessages: Record<PomodoroPhase, { title: string; body: string }> = {
   },
 };
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldVibrate: true,
-  }),
-});
+function loadNotificationsModule(): Promise<NotificationsModule | null> {
+  if (Constants.appOwnership === "expo") {
+    return Promise.resolve(null);
+  }
 
-async function configureAndroidChannel(): Promise<void> {
+  notificationsModulePromise ??= Promise.resolve()
+    .then(() => {
+      const notifications: NotificationsModule = require("expo-notifications");
+      notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldVibrate: true,
+        }),
+      });
+      return notifications;
+    })
+    .catch((error: unknown) => {
+      notificationsModulePromise = null;
+      const detail = error instanceof Error ? ` (${error.message})` : "";
+      throw new Error(
+        `Las notificaciones no están disponibles en esta versión de Expo Go. El temporizador seguirá funcionando sin avisos.${detail}`,
+      );
+    });
+
+  return notificationsModulePromise;
+}
+
+async function configureAndroidChannel(
+  notifications: NotificationsModule,
+): Promise<void> {
   if (Platform.OS !== "android") {
     return;
   }
 
-  await Notifications.setNotificationChannelAsync(
+  await notifications.setNotificationChannelAsync(
     STUDY_NOTIFICATION_CHANNEL_ID,
     {
       name: "Fin de fase Pomodoro",
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: notifications.AndroidImportance.HIGH,
       vibrationPattern: STUDY_NOTIFICATION_VIBRATION_PATTERN,
       sound: "default",
     },
@@ -50,19 +78,29 @@ async function configureAndroidChannel(): Promise<void> {
 }
 
 function hasNotificationPermission(
-  permissions: Notifications.NotificationPermissionsStatus,
+  permissions: NotificationPermissionsStatus,
 ): boolean {
   return permissions.granted;
 }
 
 export async function getStudyNotificationPermission(): Promise<boolean> {
-  const permissions = await Notifications.getPermissionsAsync();
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return false;
+  }
+
+  const permissions = await notifications.getPermissionsAsync();
   return hasNotificationPermission(permissions);
 }
 
 export async function requestStudyNotificationPermission(): Promise<boolean> {
-  await configureAndroidChannel();
-  const currentPermissions = await Notifications.getPermissionsAsync();
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return false;
+  }
+
+  await configureAndroidChannel(notifications);
+  const currentPermissions = await notifications.getPermissionsAsync();
 
   if (hasNotificationPermission(currentPermissions)) {
     return true;
@@ -72,7 +110,7 @@ export async function requestStudyNotificationPermission(): Promise<boolean> {
     return false;
   }
 
-  const requestedPermissions = await Notifications.requestPermissionsAsync();
+  const requestedPermissions = await notifications.requestPermissionsAsync();
   return hasNotificationPermission(requestedPermissions);
 }
 
@@ -85,7 +123,12 @@ export async function cancelStudyEndNotification(): Promise<void> {
     return;
   }
 
-  await Notifications.cancelScheduledNotificationAsync(notificationId);
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return;
+  }
+
+  await notifications.cancelScheduledNotificationAsync(notificationId);
   await AsyncStorage.removeItem(STUDY_END_NOTIFICATION_ID_KEY);
 }
 
@@ -99,9 +142,14 @@ export async function scheduleStudyEndNotification(
     return;
   }
 
-  await configureAndroidChannel();
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return;
+  }
+
+  await configureAndroidChannel(notifications);
   const message = phaseMessages[phase];
-  const notificationId = await Notifications.scheduleNotificationAsync({
+  const notificationId = await notifications.scheduleNotificationAsync({
     content: {
       title: message.title,
       body: message.body,
@@ -110,7 +158,7 @@ export async function scheduleStudyEndNotification(
       vibrate: STUDY_NOTIFICATION_VIBRATION_PATTERN,
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      type: notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(endsAt),
       ...(Platform.OS === "android"
         ? { channelId: STUDY_NOTIFICATION_CHANNEL_ID }
@@ -124,7 +172,41 @@ export async function scheduleStudyEndNotification(
       notificationId,
     );
   } catch (error: unknown) {
-    await Notifications.cancelScheduledNotificationAsync(notificationId);
+    await notifications.cancelScheduledNotificationAsync(notificationId);
     throw error;
+  }
+}
+
+export function addStudyNotificationResponseListener(
+  onResponse?: () => void,
+): (() => void) | null {
+  if (Constants.appOwnership === "expo") {
+    return null;
+  }
+
+  try {
+    const notifications: NotificationsModule = require("expo-notifications");
+    const addListener = notifications.addNotificationResponseReceivedListener;
+    if (typeof addListener !== "function") {
+      return null;
+    }
+
+    const subscription = addListener(() => {
+      onResponse?.();
+      void notifications.dismissAllNotificationsAsync?.().catch(() => {});
+    });
+    if (!subscription || typeof subscription.remove !== "function") {
+      return null;
+    }
+
+    return () => {
+      try {
+        subscription.remove();
+      } catch {
+        // El ciclo de vida de la app no debe depender del listener nativo.
+      }
+    };
+  } catch {
+    return null;
   }
 }

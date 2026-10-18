@@ -1,10 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { PermissionStatus } from "expo-modules-core";
 import { Platform } from "react-native";
 
 import {
   cancelStudyEndNotification,
+  addStudyNotificationResponseListener,
+  getStudyNotificationPermission,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
 } from "../study-notifications";
@@ -18,9 +21,14 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+jest.mock("expo-constants", () => ({
+  __esModule: true,
+  default: { appOwnership: null },
+}));
+
 jest.mock("expo-notifications", () => ({
   __esModule: true,
-  AndroidImportance: { DEFAULT: 3 },
+  AndroidImportance: { DEFAULT: 3, HIGH: 4 },
   SchedulableTriggerInputTypes: { DATE: "date" },
   setNotificationHandler: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
@@ -28,6 +36,8 @@ jest.mock("expo-notifications", () => ({
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   cancelScheduledNotificationAsync: jest.fn(),
+  addNotificationResponseReceivedListener: jest.fn(),
+  dismissAllNotificationsAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockGetItem = jest.mocked(AsyncStorage.getItem);
@@ -45,6 +55,9 @@ const mockSetNotificationChannel = jest.mocked(
 );
 const mockCancelNotification = jest.mocked(
   Notifications.cancelScheduledNotificationAsync,
+);
+const mockAddNotificationListener = jest.mocked(
+  Notifications.addNotificationResponseReceivedListener,
 );
 
 describe("study end notifications", () => {
@@ -111,13 +124,13 @@ describe("study end notifications", () => {
         trigger: {
           type: "date",
           date: new Date(endsAt),
-          channelId: "pomodoro-phase-end",
+          channelId: "pomodoro-phase-end-high",
         },
       });
       expect(mockSetNotificationChannel).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          importance: 3,
+          importance: 4,
           vibrationPattern: [0, 250, 250, 250],
           sound: "default",
         }),
@@ -146,6 +159,16 @@ describe("study end notifications", () => {
     expect(mockRemoveItem).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves the notification ID and surfaces cancellation failures", async () => {
+    const cancellationError = new Error("native notifications unavailable");
+    mockGetItem.mockResolvedValue("previous-id");
+    mockCancelNotification.mockRejectedValueOnce(cancellationError);
+
+    await expect(cancelStudyEndNotification()).rejects.toBe(cancellationError);
+
+    expect(mockRemoveItem).not.toHaveBeenCalled();
+  });
+
   it("propagates scheduling failures", async () => {
     const scheduleError = new Error("schedule failed");
     mockScheduleNotification.mockRejectedValue(scheduleError);
@@ -153,5 +176,113 @@ describe("study end notifications", () => {
     await expect(
       scheduleStudyEndNotification("study", Date.now() + 2_000_000),
     ).rejects.toBe(scheduleError);
+  });
+
+  it("reports an unavailable Expo Go native module without crashing on import", async () => {
+    jest.resetModules();
+    jest.doMock("expo-notifications", () => {
+      throw new Error("Cannot find native module 'ExpoTopicSubscriptionModule'");
+    });
+
+    const notificationAdapter: typeof import("../study-notifications") =
+      require("../study-notifications");
+
+    expect(
+      notificationAdapter.addStudyNotificationResponseListener(),
+    ).toBeNull();
+    await expect(
+      notificationAdapter.getStudyNotificationPermission(),
+    ).rejects.toThrow(
+      "Las notificaciones no están disponibles en esta versión de Expo Go.",
+    );
+  });
+
+  it("treats notifications as unavailable in Expo Go", async () => {
+    const ownershipDescriptor = Object.getOwnPropertyDescriptor(
+      Constants,
+      "appOwnership",
+    );
+    Object.defineProperty(Constants, "appOwnership", {
+      configurable: true,
+      value: "expo",
+    });
+
+    try {
+      mockGetItem.mockResolvedValue("previous-id");
+
+      await expect(getStudyNotificationPermission()).resolves.toBe(false);
+      await expect(requestStudyNotificationPermission()).resolves.toBe(false);
+      await expect(
+        scheduleStudyEndNotification("study", Date.now() + 2_000_000),
+      ).resolves.toBeUndefined();
+      await expect(cancelStudyEndNotification()).resolves.toBeUndefined();
+      expect(addStudyNotificationResponseListener()).toBeNull();
+      expect(mockGetPermissions).not.toHaveBeenCalled();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
+      expect(mockScheduleNotification).not.toHaveBeenCalled();
+      expect(mockCancelNotification).not.toHaveBeenCalled();
+      expect(mockAddNotificationListener).not.toHaveBeenCalled();
+    } finally {
+      if (ownershipDescriptor) {
+        Object.defineProperty(
+          Constants,
+          "appOwnership",
+          ownershipDescriptor,
+        );
+      } else {
+        Reflect.deleteProperty(Constants, "appOwnership");
+      }
+    }
+  });
+
+  it("ignores listener registration failures when the native module is unavailable", () => {
+    mockAddNotificationListener.mockImplementationOnce(() => {
+      throw new Error("ExpoTopicSubscriptionModule missing");
+    });
+
+    expect(addStudyNotificationResponseListener()).toBeNull();
+  });
+
+  it("does not let native listener cleanup failures escape", () => {
+    mockAddNotificationListener.mockReturnValueOnce({
+      remove: () => {
+        throw new Error("listener already removed");
+      },
+    });
+
+    const unsubscribe = addStudyNotificationResponseListener();
+    expect(() => unsubscribe?.()).not.toThrow();
+  });
+
+  it("does not mutate a read-only Expo global while importing the adapter", () => {
+    const originalExpoDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "expo",
+    );
+    Object.defineProperty(globalThis, "expo", {
+      configurable: true,
+      value: Object.freeze({ modules: Object.freeze({}) }),
+      writable: false,
+    });
+
+    try {
+      jest.resetModules();
+      const notificationAdapter: typeof import("../study-notifications") =
+        require("../study-notifications");
+
+      expect(notificationAdapter.getStudyNotificationPermission).toEqual(
+        expect.any(Function),
+      );
+      expect(
+        Object.getOwnPropertyDescriptor(globalThis, "expo")?.writable,
+      ).toBe(false);
+    } finally {
+      if (originalExpoDescriptor) {
+        Object.defineProperty(globalThis, "expo", originalExpoDescriptor);
+      } else {
+        Reflect.deleteProperty(globalThis, "expo");
+      }
+      jest.resetModules();
+    }
   });
 });

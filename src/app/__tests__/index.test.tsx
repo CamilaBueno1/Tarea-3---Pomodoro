@@ -10,7 +10,7 @@ jest.mock("../../hooks/use-pomodoro-session", () => ({
 }));
 jest.mock("@/global.css", () => ({}), { virtual: true });
 
-import HomeScreen from "../index";
+import HomeScreen from "../(tabs)/index";
 
 const mockStart = jest.fn();
 const mockPause = jest.fn();

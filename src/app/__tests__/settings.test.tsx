@@ -51,7 +51,7 @@ jest.mock("expo-router/unstable-native-tabs", () => {
   return { NativeTabs };
 });
 
-import SettingsScreen from "../settings";
+import SettingsScreen from "../(tabs)/settings";
 import AppTabsWeb from "../../components/app-tabs.web";
 
 const mockSaveSettings = jest.fn();
@@ -175,6 +175,23 @@ describe("pomodoro settings screen", () => {
         longBreakDurationMinutes: 20,
         pomodorosBeforeLongBreak: 3,
       }),
+    );
+  });
+
+  it("shows a temporary accessible toast at the top after saving", async () => {
+    await render(<SettingsScreen />);
+
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Guardar ajustes" }),
+    );
+    await actPressAlertButton("Guardar");
+
+    const toastMessage = await screen.findByText(
+      "Ajustes guardados correctamente.",
+    );
+    expect(toastMessage.parent?.props.accessibilityRole).toBe("alert");
+    expect(toastMessage.parent?.parent?.props.style).toEqual(
+      expect.objectContaining({ position: "absolute", top: 8 }),
     );
   });
 

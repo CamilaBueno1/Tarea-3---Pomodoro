@@ -5,7 +5,7 @@ import { CotopaxiColors } from '@/constants/theme';
 export default function AppTabs() {
   return (
     <NativeTabs
-      backgroundColor={CotopaxiColors.background}
+      backgroundColor={CotopaxiColors.white}
       indicatorColor={CotopaxiColors.gold}
       labelStyle={{
         selected: { color: CotopaxiColors.navy },

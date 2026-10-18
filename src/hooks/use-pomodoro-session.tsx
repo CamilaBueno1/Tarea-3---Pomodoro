@@ -6,6 +6,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
+import { AppState } from "react-native";
 
 import {
   advancePomodoroSession,
@@ -20,6 +21,7 @@ import {
   type PomodoroSession,
 } from "../domain/pomodoro-session";
 import {
+  addStudyNotificationResponseListener,
   cancelStudyEndNotification,
   getStudyNotificationPermission,
   requestStudyNotificationPermission,
@@ -93,7 +95,6 @@ export function PomodoroSessionProvider({
         await cancelStudyEndNotification();
       } catch (cancelError: unknown) {
         setNotificationError(toError(cancelError));
-        return false;
       }
 
       try {
@@ -347,6 +348,45 @@ export function PomodoroSessionProvider({
 
     return () => clearInterval(intervalId);
   }, [persistSession, session, settings, status]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        const now = Date.now();
+        setNowMs(now);
+        if (session?.status === "running") {
+          const nextSession = advancePomodoroSession(session, now, settings);
+          if (nextSession !== session) {
+            void persistSession(nextSession, session);
+          }
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [persistSession, session, settings]);
+
+  useEffect(() => {
+    const unsubscribe =
+      typeof addStudyNotificationResponseListener === "function"
+        ? addStudyNotificationResponseListener(() => {
+            const now = Date.now();
+            setNowMs(now);
+            if (session?.status === "running") {
+              const nextSession = advancePomodoroSession(session, now, settings);
+              if (nextSession !== session) {
+                void persistSession(nextSession, session);
+              }
+            }
+          })
+        : null;
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [persistSession, session, settings]);
 
   const remainingMs =
     session === null ? 0 : getPomodoroRemainingTime(session, nowMs);

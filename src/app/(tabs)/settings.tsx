@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -85,6 +85,15 @@ export default function SettingsScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const formValues = values ?? toFormValues(settings);
+
+  useEffect(() => {
+    if (!savedMessage) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => setSavedMessage(null), 3_500);
+    return () => clearTimeout(timeoutId);
+  }, [savedMessage]);
 
   async function persistSettings(nextSettings: PomodoroSettings) {
     setIsSaving(true);
@@ -190,19 +199,34 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
+            {/* Encabezado Institucional */}
             <View style={styles.header}>
-              <Text style={styles.eyebrow}>ACADEMIA COTOPAXI</Text>
+              <View style={styles.badgeRow}>
+                <Text style={styles.eyebrow}>ACADEMIA COTOPAXI</Text>
+                <View style={styles.focusBadge}>
+                  <Text style={styles.focusBadgeText}>CONFIGURACIÓN</Text>
+                </View>
+              </View>
               <Text style={styles.title}>Ajustes</Text>
               <Text style={styles.headerDescription}>
                 Adapta los tiempos a tu ritmo de estudio.
               </Text>
             </View>
 
+            {/* Tarjeta de Formulario Principal */}
             <View style={styles.formCard}>
-              <Text style={styles.sectionTitle}>Duración de cada fase</Text>
+              {/* Sección 1: Duración de cada fase */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Duración de cada fase</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Los cambios se aplican al comenzar la siguiente fase.
+                </Text>
+              </View>
+
               <SettingsField
                 label="Duración de estudio en minutos"
                 value={formValues.studyDurationMinutes}
+                unit="min"
                 hint="De 1 a 120 minutos."
                 error={fieldErrors.studyDurationMinutes}
                 onChangeText={(value) =>
@@ -212,6 +236,7 @@ export default function SettingsScreen() {
               <SettingsField
                 label="Duración del descanso corto en minutos"
                 value={formValues.shortBreakDurationMinutes}
+                unit="min"
                 hint="De 1 a 120 minutos."
                 error={fieldErrors.shortBreakDurationMinutes}
                 onChangeText={(value) =>
@@ -221,6 +246,7 @@ export default function SettingsScreen() {
               <SettingsField
                 label="Duración del descanso largo en minutos"
                 value={formValues.longBreakDurationMinutes}
+                unit="min"
                 hint="De 1 a 120 minutos."
                 error={fieldErrors.longBreakDurationMinutes}
                 onChangeText={(value) =>
@@ -228,10 +254,20 @@ export default function SettingsScreen() {
                 }
               />
 
-              <Text style={styles.sectionTitle}>Ciclo Pomodoro</Text>
+              <View style={styles.divider} />
+
+              {/* Sección 2: Ciclo Pomodoro */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Ciclo Pomodoro</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Cantidad de pomodoros de estudio antes de un descanso largo.
+                </Text>
+              </View>
+
               <SettingsField
                 label="Pomodoros antes del descanso largo"
                 value={formValues.pomodorosBeforeLongBreak}
+                unit="pomodoros"
                 hint="De 1 a 12 pomodoros."
                 error={fieldErrors.pomodorosBeforeLongBreak}
                 onChangeText={(value) =>
@@ -240,33 +276,42 @@ export default function SettingsScreen() {
               />
 
               {operationError ? (
-                <Text accessibilityRole="alert" style={styles.errorText}>
-                  {operationError}
-                </Text>
+                <View style={styles.errorBox}>
+                  <Text accessibilityRole="alert" style={styles.errorText}>
+                    {operationError}
+                  </Text>
+                </View>
               ) : null}
-              {savedMessage ? (
-                <Text accessibilityRole="alert" style={styles.successText}>
-                  {savedMessage}
-                </Text>
-              ) : null}
-
-              <SettingsButton
-                label="Guardar ajustes"
-                title={isSaving ? 'Guardando…' : 'Guardar ajustes'}
-                onPress={handleSave}
-                disabled={isSaving}
-              />
-              <SettingsButton
-                destructive
-                label="Restablecer valores"
-                title="Restablecer valores"
-                onPress={handleReset}
-                disabled={isSaving}
-              />
+              {/* Botones de acción */}
+              <View style={styles.buttonGroup}>
+                <SettingsButton
+                  label="Guardar ajustes"
+                  title={isSaving ? 'Guardando…' : 'Guardar ajustes'}
+                  onPress={handleSave}
+                  disabled={isSaving}
+                />
+                <SettingsButton
+                  destructive
+                  label="Restablecer valores"
+                  title="Restablecer valores"
+                  onPress={handleReset}
+                  disabled={isSaving}
+                />
+              </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {savedMessage ? (
+        <View pointerEvents="box-none" style={styles.toastLayer}>
+          <View
+            accessibilityLiveRegion="polite"
+            accessibilityRole="alert"
+            style={styles.successToast}>
+            <Text style={styles.successText}>{savedMessage}</Text>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -301,12 +346,14 @@ function StatusView({
 function SettingsField({
   label,
   value,
+  unit,
   hint,
   error,
   onChangeText,
 }: {
   label: string;
   value: string;
+  unit?: string;
   hint: string;
   error?: string;
   onChangeText: (value: string) => void;
@@ -314,14 +361,21 @@ function SettingsField({
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        accessibilityHint={error ? `${hint} ${error}` : hint}
-        keyboardType="number-pad"
-        onChangeText={onChangeText}
-        value={value}
-        style={[styles.input, error && styles.inputError]}
-      />
+      <View style={[styles.inputWrapper, error && styles.inputError]}>
+        <TextInput
+          accessibilityLabel={label}
+          accessibilityHint={error ? `${hint} ${error}` : hint}
+          keyboardType="number-pad"
+          onChangeText={onChangeText}
+          value={value}
+          style={styles.input}
+        />
+        {unit ? (
+          <View style={styles.unitBadge}>
+            <Text style={styles.unitText}>{unit}</Text>
+          </View>
+        ) : null}
+      </View>
       <Text style={[styles.fieldHint, error && styles.errorText]}>
         {error ?? hint}
       </Text>
@@ -352,7 +406,7 @@ function SettingsButton({
       style={({ pressed }) => [
         styles.button,
         destructive && styles.destructiveButton,
-        pressed && !disabled && styles.buttonPressed,
+        pressed && !disabled && (destructive ? styles.destructiveButtonPressed : styles.buttonPressed),
         disabled && styles.buttonDisabled,
       ]}>
       <Text
@@ -374,10 +428,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: CotopaxiColors.background,
   },
+  toastLayer: {
+    position: 'absolute',
+    top: Spacing.two,
+    left: Spacing.three,
+    right: Spacing.three,
+    zIndex: 10,
+    alignItems: 'center',
+  },
+  successToast: {
+    width: '100%',
+    maxWidth: 560,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: CotopaxiColors.success,
+    borderTopColor: CotopaxiColors.white,
+    borderTopWidth: 2,
+    backgroundColor: CotopaxiColors.success,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 7,
+  },
   scrollContent: {
     flexGrow: 1,
     padding: Spacing.four,
-    paddingBottom: Spacing.five,
+    paddingBottom: Platform.OS === 'web' ? 112 : Spacing.five,
   },
   content: {
     width: '100%',
@@ -386,100 +465,207 @@ const styles = StyleSheet.create({
     gap: Spacing.four,
   },
   header: {
-    borderRadius: Spacing.three,
+    borderRadius: 24,
     backgroundColor: CotopaxiColors.navy,
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
+    paddingVertical: Spacing.four,
+    gap: Spacing.one,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 4,
+    borderColor: CotopaxiColors.navy,
+    borderTopColor: CotopaxiColors.white,
+    borderWidth: 1,
+    borderTopWidth: 2,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.two,
   },
   eyebrow: {
-    color: CotopaxiColors.white,
-    fontSize: 13,
+    color: CotopaxiColors.gold,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+  focusBadge: {
+    backgroundColor: CotopaxiColors.white,
+    paddingHorizontal: Spacing.one,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  focusBadgeText: {
+    color: CotopaxiColors.navy,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1.4,
+    letterSpacing: 1,
   },
   title: {
     color: CotopaxiColors.white,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
   },
   headerDescription: {
     color: CotopaxiColors.white,
     fontSize: 15,
+    fontWeight: '500',
   },
   formCard: {
     borderColor: CotopaxiColors.border,
-    borderRadius: Spacing.three,
+    borderRadius: 28,
     borderWidth: 1,
     backgroundColor: CotopaxiColors.white,
     padding: Spacing.four,
     gap: Spacing.three,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 3,
+    borderTopColor: CotopaxiColors.white,
+    borderTopWidth: 2,
+  },
+  sectionHeader: {
+    gap: Spacing.half,
   },
   sectionTitle: {
     color: CotopaxiColors.navy,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  sectionSubtitle: {
+    color: CotopaxiColors.secondaryText,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: CotopaxiColors.border,
+    marginVertical: Spacing.one,
   },
   field: {
     gap: Spacing.one,
   },
   fieldLabel: {
     color: CotopaxiColors.text,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
-  input: {
-    minHeight: 48,
+  inputWrapper: {
+    minHeight: 52,
     borderColor: CotopaxiColors.border,
-    borderRadius: Spacing.two,
+    borderRadius: 24,
     borderWidth: 1,
     backgroundColor: CotopaxiColors.white,
-    color: CotopaxiColors.text,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: Spacing.three,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  input: {
+    flex: 1,
+    color: CotopaxiColors.text,
     fontSize: 18,
+    fontWeight: '700',
+    paddingVertical: Spacing.two,
   },
   inputError: {
     borderColor: CotopaxiColors.destructive,
+    backgroundColor: CotopaxiColors.white,
+  },
+  unitBadge: {
+    backgroundColor: CotopaxiColors.navy,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.half,
+    borderRadius: 8,
+  },
+  unitText: {
+    color: CotopaxiColors.white,
+    fontSize: 12,
+    fontWeight: '700',
   },
   fieldHint: {
     color: CotopaxiColors.secondaryText,
-    fontSize: 14,
+    fontSize: 13,
+  },
+  errorBox: {
+    backgroundColor: CotopaxiColors.white,
+    borderColor: CotopaxiColors.destructive,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: Spacing.three,
   },
   errorText: {
     color: CotopaxiColors.destructive,
+    fontSize: 13,
+    fontWeight: '600',
   },
   successText: {
-    borderRadius: Spacing.two,
-    backgroundColor: CotopaxiColors.success,
     color: CotopaxiColors.white,
-    padding: Spacing.two,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  buttonGroup: {
+    gap: Spacing.two,
+    marginTop: Spacing.two,
   },
   button: {
     minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Spacing.two,
+    borderRadius: 28,
     backgroundColor: CotopaxiColors.gold,
     paddingHorizontal: Spacing.four,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 3,
+    borderColor: CotopaxiColors.gold,
+    borderTopColor: CotopaxiColors.white,
+    borderWidth: 1,
+    borderTopWidth: 2,
   },
   destructiveButton: {
     backgroundColor: CotopaxiColors.destructive,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 3,
+    borderColor: CotopaxiColors.destructive,
+    borderTopColor: CotopaxiColors.white,
+    borderWidth: 1,
+    borderTopWidth: 2,
   },
   buttonPressed: {
-    borderColor: CotopaxiColors.navy,
-    borderWidth: 2,
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
+  },
+  destructiveButtonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
   buttonDisabled: {
-    borderColor: CotopaxiColors.border,
-    borderWidth: 1,
+    opacity: 0.5,
   },
   buttonText: {
     color: CotopaxiColors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
   },
   destructiveButtonText: {
     color: CotopaxiColors.white,
+    fontSize: 16,
+    fontWeight: '700',
   },
   statusContainer: {
     flex: 1,

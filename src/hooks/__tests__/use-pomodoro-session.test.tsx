@@ -205,4 +205,41 @@ describe("Pomodoro session hook", () => {
     });
     expect(result.current.session?.status).toBe("running");
   });
+
+  it("restores and runs the timer when Expo Go cannot load native notifications", async () => {
+    const nativeModuleError = new Error(
+      "Las notificaciones no están disponibles en esta versión de Expo Go.",
+    );
+    mockGetPermission.mockRejectedValueOnce(nativeModuleError);
+
+    const { result } = await renderHook(() => usePomodoroSession(), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.notificationError).toBe(nativeModuleError);
+    expect(result.current.notificationPermissionGranted).toBe(false);
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    expect(result.current.session?.status).toBe("running");
+    expect(mockSaveSession).toHaveBeenCalled();
+    expect(mockScheduleNotification).not.toHaveBeenCalled();
+  });
+
+  it("continues a timer transition and exposes native cancellation errors", async () => {
+    mockGetPermission.mockResolvedValueOnce(false);
+    mockCancelNotification.mockResolvedValueOnce(undefined);
+    const { result } = await renderHook(() => usePomodoroSession(), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const nativeModuleError = new Error("ExpoTopicSubscriptionModule missing");
+    mockCancelNotification.mockRejectedValueOnce(nativeModuleError);
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    expect(result.current.session?.status).toBe("running");
+    expect(result.current.notificationError).toBe(nativeModuleError);
+  });
 });
