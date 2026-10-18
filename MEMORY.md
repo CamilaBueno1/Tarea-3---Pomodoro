@@ -10,6 +10,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
   `npx tsc --noEmit` y `npx expo export --platform web`.
 - El APK debug Android compila; `adb devices` no reporta dispositivos para
   completar las pruebas manuales.
+- Se corrigió la navegación de pestañas web y se verificó en navegador que
+  Temporizador y Ajustes abren sus pantallas.
 
 ## Decisiones (y por qué)
 - (vacío por ahora)

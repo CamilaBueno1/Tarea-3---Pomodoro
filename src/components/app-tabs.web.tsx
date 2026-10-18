@@ -5,25 +5,23 @@ import {
   TabSlot,
   type TabTriggerSlotProps,
 } from 'expo-router/ui';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CotopaxiColors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { CotopaxiColors, Spacing } from '@/constants/theme';
 
 export default function AppTabs() {
   return (
     <Tabs>
       <TabSlot style={styles.tabSlot} />
-      <TabList asChild>
+      <TabList asChild style={styles.tabButtons}>
         <SafeAreaView edges={['bottom']} style={styles.tabBar}>
-          <View style={styles.tabButtons}>
-            <TabTrigger name="index" href="/" asChild>
-              <TabButton>Temporizador</TabButton>
-            </TabTrigger>
-            <TabTrigger name="settings" href="/settings" asChild>
-              <TabButton>Ajustes</TabButton>
-            </TabTrigger>
-          </View>
+          <TabTrigger name="index" href="/" asChild>
+            <TabButton>Temporizador</TabButton>
+          </TabTrigger>
+          <TabTrigger name="settings" href="/settings" asChild>
+            <TabButton>Ajustes</TabButton>
+          </TabTrigger>
         </SafeAreaView>
       </TabList>
     </Tabs>
@@ -60,8 +58,6 @@ const styles = StyleSheet.create({
     backgroundColor: CotopaxiColors.navy,
   },
   tabButtons: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
     flexDirection: 'row',
     justifyContent: 'center',
     gap: Spacing.two,
