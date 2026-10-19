@@ -160,6 +160,7 @@ export async function scheduleStudyEndNotification(
   }
 
   await configureAndroidChannel(notifications);
+  await notifications.cancelAllScheduledNotificationsAsync();
   const message = phaseMessages[phase];
   const notificationId = await notifications.scheduleNotificationAsync({
     content: {
@@ -197,6 +198,7 @@ export async function notifyStudyPhaseCompleted(): Promise<void> {
   }
 
   await configureAndroidChannel(notifications);
+  await notifications.cancelAllScheduledNotificationsAsync();
   await notifications.scheduleNotificationAsync({
     content: {
       title: "¡Tiempo finalizado!",

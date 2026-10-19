@@ -5,7 +5,6 @@ import {
   getStudyNotificationPermission,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
-  notifyStudyPhaseCompleted,
 } from "../../storage/study-notifications";
 import { loadStudySession, saveStudySession } from "../../storage/study-session-storage";
 import {
@@ -34,7 +33,6 @@ jest.mock("../../storage/study-notifications", () => ({
   getStudyNotificationPermission: jest.fn(),
   requestStudyNotificationPermission: jest.fn(),
   scheduleStudyEndNotification: jest.fn(),
-  notifyStudyPhaseCompleted: jest.fn(),
 }));
 
 const mockUseSettings = jest.mocked(usePomodoroSettings);
@@ -45,7 +43,6 @@ const mockRequestPermission = jest.mocked(
   requestStudyNotificationPermission,
 );
 const mockScheduleNotification = jest.mocked(scheduleStudyEndNotification);
-const mockNotifyPhaseCompleted = jest.mocked(notifyStudyPhaseCompleted);
 const mockCancelNotification = jest.mocked(cancelStudyEndNotification);
 const settings: PomodoroSettings = {
   ...DEFAULT_POMODORO_SETTINGS,
@@ -72,7 +69,6 @@ describe("Pomodoro session hook", () => {
     mockGetPermission.mockResolvedValue(true);
     mockRequestPermission.mockResolvedValue(true);
     mockScheduleNotification.mockResolvedValue(undefined);
-    mockNotifyPhaseCompleted.mockResolvedValue(undefined);
     mockCancelNotification.mockResolvedValue(undefined);
     jest.spyOn(Date, "now").mockReturnValue(1_000_000);
   });
@@ -99,15 +95,26 @@ describe("Pomodoro session hook", () => {
     );
     mockLoadSession.mockResolvedValue(running);
 
-    const { result } = await renderHook(() => usePomodoroSession(), { wrapper });
+    const { result, rerender } = await renderHook(() => usePomodoroSession(), {
+      wrapper,
+    });
 
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.session).toEqual(running);
     expect(result.current.remainingMs).toBe(60_000);
+    rerender(undefined);
+    await waitFor(() =>
+      expect(mockScheduleNotification).toHaveBeenCalledTimes(1),
+    );
+    rerender(undefined);
+    await waitFor(() =>
+      expect(mockScheduleNotification).toHaveBeenCalledTimes(1),
+    );
     expect(mockScheduleNotification).toHaveBeenCalledWith(
       "study",
       running.endsAt,
     );
+    expect(mockScheduleNotification).toHaveBeenCalledTimes(1);
   });
 
   it("reconciles an expired running phase once and cancels the old notification", async () => {
@@ -177,7 +184,7 @@ describe("Pomodoro session hook", () => {
     expect(mockScheduleNotification).toHaveBeenCalledTimes(2);
   });
 
-  it("replaces the scheduled notification with an immediate notification when a phase completes", async () => {
+  it("keeps the scheduled system notification when a phase completes in the foreground", async () => {
     const { result } = await renderHook(() => usePomodoroSession(), { wrapper });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     jest.useFakeTimers();
@@ -203,8 +210,8 @@ describe("Pomodoro session hook", () => {
       phase: "shortBreak",
       lastCompletedPhase: "study",
     });
-    expect(mockCancelNotification).toHaveBeenCalledTimes(1);
-    expect(mockNotifyPhaseCompleted).toHaveBeenCalledTimes(1);
+    expect(mockCancelNotification).not.toHaveBeenCalled();
+    expect(mockScheduleNotification).toHaveBeenCalledTimes(1);
   });
 
   it("continues timer state and exposes an error when persistence fails", async () => {

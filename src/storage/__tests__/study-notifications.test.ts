@@ -35,6 +35,7 @@ jest.mock("expo-notifications", () => ({
   SchedulableTriggerInputTypes: { DATE: "date" },
   setNotificationHandler: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
+  cancelAllScheduledNotificationsAsync: jest.fn(),
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
@@ -62,6 +63,9 @@ const mockSetNotificationChannel = jest.mocked(
 const mockCancelNotification = jest.mocked(
   Notifications.cancelScheduledNotificationAsync,
 );
+const mockCancelAllScheduledNotifications = jest.mocked(
+  Notifications.cancelAllScheduledNotificationsAsync,
+);
 const mockAddNotificationListener = jest.mocked(
   Notifications.addNotificationResponseReceivedListener,
 );
@@ -85,6 +89,7 @@ describe("study end notifications", () => {
       status: PermissionStatus.GRANTED,
     });
     mockScheduleNotification.mockResolvedValue("notification-id");
+    mockCancelAllScheduledNotifications.mockResolvedValue(undefined);
   });
 
   it("requests permission when it has not already been granted", async () => {
@@ -170,6 +175,9 @@ describe("study end notifications", () => {
       const endsAt = Date.now() + 1_800_000;
       await scheduleStudyEndNotification("shortBreak", endsAt);
 
+      expect(mockCancelAllScheduledNotifications).toHaveBeenCalledTimes(1);
+      expect(mockCancelAllScheduledNotifications.mock.invocationCallOrder[0])
+        .toBeLessThan(mockScheduleNotification.mock.invocationCallOrder[0]);
       expect(mockScheduleNotification).toHaveBeenCalledWith({
         content: {
           title: "Descanso corto terminado",
@@ -206,6 +214,9 @@ describe("study end notifications", () => {
   it("sends an immediate notification when a phase completes", async () => {
     await notifyStudyPhaseCompleted();
 
+    expect(mockCancelAllScheduledNotifications).toHaveBeenCalledTimes(1);
+    expect(mockCancelAllScheduledNotifications.mock.invocationCallOrder[0])
+      .toBeLessThan(mockScheduleNotification.mock.invocationCallOrder[0]);
     expect(mockScheduleNotification).toHaveBeenCalledWith({
       content: {
         title: "¡Tiempo finalizado!",
@@ -294,6 +305,7 @@ describe("study end notifications", () => {
       expect(mockGetPermissions).not.toHaveBeenCalled();
       expect(mockRequestPermissions).not.toHaveBeenCalled();
       expect(mockScheduleNotification).not.toHaveBeenCalled();
+      expect(mockCancelAllScheduledNotifications).not.toHaveBeenCalled();
       expect(mockCancelNotification).not.toHaveBeenCalled();
       expect(mockAddNotificationListener).not.toHaveBeenCalled();
     } finally {

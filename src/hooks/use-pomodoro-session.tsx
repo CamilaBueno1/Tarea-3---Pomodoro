@@ -23,7 +23,6 @@ import {
 import {
   addStudyNotificationResponseListener,
   cancelStudyEndNotification,
-  notifyStudyPhaseCompleted,
   getStudyNotificationPermission,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
@@ -135,22 +134,10 @@ export function PomodoroSessionProvider({
       setError(null);
 
       if (phaseCompleted) {
-        let completionNotificationError: Error | null = null;
-        try {
-          await cancelStudyEndNotification();
-        } catch (cancelError: unknown) {
-          completionNotificationError = toError(cancelError);
-        }
+        return true;
+      }
 
-        if (notificationsEnabled) {
-          try {
-            await notifyStudyPhaseCompleted();
-          } catch (notificationFailure: unknown) {
-            completionNotificationError = toError(notificationFailure);
-          }
-        }
-        setNotificationError(completionNotificationError);
-      } else if (nextSession.status === "running") {
+      if (nextSession.status === "running") {
         if (notificationsEnabled) {
           try {
             await scheduleStudyEndNotification(

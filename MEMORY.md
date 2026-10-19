@@ -4,11 +4,13 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 ## Estado actual
 - HU-001–HU-005 están implementadas; la verificación manual Android de
   permisos, notificaciones y pantallas sigue pendiente.
-- HU-006 tiene spec y plan aprobados; T1–T6 están completadas. T7–T9 y T10
-  siguen pendientes de validación manual en `specs/006-hu006-offline-sin-anuncios/`.
-- La finalización del temporizador muestra una alerta y programa una
-  notificación inmediata; Jest (102 pruebas) y TypeScript pasan. La validación
-  audible en Android real sigue pendiente.
+- HU-006 tiene spec y plan aprobados, T1–T10 completadas y validación conforme
+  a los criterios; ver `specs/006-hu006-offline-sin-anuncios/`. El usuario
+  confirmó las pruebas Android físicas/offline y Jest pasa con 102 pruebas.
+- La programación del temporizador limpia notificaciones pendientes y al
+  finalizar en primer plano conserva el aviso de sistema sin emitir otro
+  manual. Jest (102 pruebas) y TypeScript pasan; la validación audible en
+  Android real sigue pendiente.
 - Se añadió la documentación general del proyecto en `README.md`, con
   descripción, instalación, uso y estructura del repositorio.
 - Expo Router agrupa Temporizador y Ajustes bajo `(tabs)`; las rutas web son
@@ -23,6 +25,5 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - (vacío por ahora)
 
 ## Próximos pasos
-- Continuar HU-006 con validación manual de T7–T9 en Android;
-  después cerrar T10 con la suite completa y la revisión visual registrada.
-- Siguiente comando: `/sdd-implement 006-hu006-offline-sin-anuncios T7`.  
+- Consultar el estado SDD general del proyecto.
+- Siguiente comando SDD: `/sdd-status`.
