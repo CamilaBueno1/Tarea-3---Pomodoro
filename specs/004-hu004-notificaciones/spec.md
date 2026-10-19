@@ -1,6 +1,6 @@
 # Spec 004 - Aviso al finalizar la fase
 
-Estado: Borrador
+Estado: Aprobada y completada
 HU de origen: docs/historias/HU-004.md
 Decisiones: decisiones.md
 
@@ -22,7 +22,7 @@ Esta propuesta desarrolla HU-004. La lógica del temporizador y la transición d
 - **RF-4:** CUANDO el estudiante toca la notificación o el botón de detener del aviso, EL SISTEMA silencia la alarma y abre la aplicación mostrando la siguiente fase. Origen: HU-004, escenario «Detener el aviso».
 - **RF-5:** CUANDO la aplicación necesita consultar el permiso de notificaciones por primera vez, EL SISTEMA explica para qué lo solicita y lo pide explícitamente antes de usar el aviso. Origen: HU-004, escenario «Permiso de notificaciones».
 - **RF-6:** SI el estudiante no concede el permiso de notificaciones, ENTONCES EL SISTEMA informa la limitación y conserva el funcionamiento del temporizador sin afirmar una notificación garantizada. Origen: HU-004, escenario «Permiso de notificaciones».
-- **RF-7:** CUANDO el sistema operativo, el fabricante o la configuración del dispositivo restringen sonido, vibración o alarma en silencio o No molestar, EL SISTEMA no promete que el aviso evada esa restricción y lo comunica de forma clara al estudiante. Origen: nota de implementación de HU-004; [NECESITA ACLARACIÓN] para la decisión explícita de comportamiento de plataforma.
+- **RF-7:** CUANDO el sistema operativo, el fabricante o la configuración del dispositivo restringen sonido, vibración o alarma en silencio o No molestar, EL SISTEMA no promete que el aviso evada esa restricción y lo comunica de forma clara al estudiante. Origen: nota de implementación de HU-004 y decisión documentada en `decisiones.md`.
 
 ## Requisitos no funcionales
 
@@ -57,4 +57,6 @@ Esta propuesta desarrolla HU-004. La lógica del temporizador y la transición d
 
 ## Dudas abiertas
 
-- La exactitud del comportamiento audible/vibratorio bajo silencio, modo No molestar o restricciones del fabricante no está garantizada por la especificación ni por la plataforma; este punto queda como [NECESITA ACLARACIÓN] para la decisión final de producto y la verificación de dispositivo.
+- Ninguna. Conforme a `decisiones.md`, la aplicación respeta los permisos y
+  restricciones del sistema operativo y no garantiza sonido o vibración en
+  silencio o No molestar. El resultado depende del dispositivo.

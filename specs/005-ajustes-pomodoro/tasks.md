@@ -1,6 +1,6 @@
 # Tareas propuestas – Ajustes de Pomodoro
 
-Estado: Aprobado
+Estado: Aprobado y completado
 Spec: [spec.md](./spec.md)
 Plan propuesto: [plan.md](./plan.md)
 HU: [HU-005](../../docs/historias/HU-005.md)
@@ -53,13 +53,15 @@ Las tareas están aprobadas y se ejecutarán secuencialmente.
   confirmación, rechaza y señala valores inválidos, el teclado no tapa acciones,
   y pasan las pruebas de T8 y `npx tsc --noEmit`.
   Depende de T8.
-- [ ] **T10. Validar ajustes en Expo Go o emulador Android.** RF-1 a RF-11.
+- [x] **T10. Validar ajustes en Expo Go o emulador Android.** RF-1 a RF-11.
   Hecho cuando: se comprueban pestaña, orientación, áreas seguras, teclado,
   límites, mensajes, confirmación/cancelación, persistencia tras reiniciar,
   uso sin conexión y errores; con HU-001/HU-002 disponibles se comprueba
   también que la fase/ciclo en curso conserva el valor anterior y los
   siguientes usan el nuevo. Registrar el resultado antes de cerrar la tarea.
   Depende de T9 y de las integraciones HU-001/HU-002 aplicables.
+  Resultado: validación manual en Android confirmada por el usuario. No se
+  registraron modelo ni versión del dispositivo.
 
 ## Dependencias y límites
 

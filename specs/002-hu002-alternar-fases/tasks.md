@@ -1,6 +1,6 @@
 # Tareas – HU-002
 
-Estado: Implementación automatizada completada; verificación manual pendiente
+Estado: Implementación y validación completadas
 Spec: spec.md
 Plan: plan.md
 HU: ../../docs/historias/HU-002.md
@@ -22,8 +22,10 @@ HU: ../../docs/historias/HU-002.md
 - [x] **T6. Mostrar fase y progreso en la pantalla principal.** RF-1 a RF-6.
   Hecho cuando: se ven fase, tiempo y pomodoros, los estados se entienden sin
   color, y pasan T5, Jest y TypeScript.
-- [ ] **T7. Verificar secuencia completa en dispositivo.** RF-1 a RF-6.
+- [x] **T7. Verificar secuencia completa en dispositivo.** RF-1 a RF-6.
   Hecho cuando: se observan ciclos corto/largo, descanso que prepara estudio,
   ajustes aplicados a fases/ciclos siguientes y controles en ambas
   orientaciones; registrar las limitaciones del dispositivo.
-  Pendiente: prueba manual en dispositivo/emulador Android.
+  Resultado: el usuario confirma la validación manual en Android de la
+  secuencia de fases, el ciclo, los ajustes aplicados y los controles. No se
+  registraron modelo ni versión del dispositivo.

@@ -1,6 +1,6 @@
 # Tareas – HU-003
 
-Estado: Implementación automatizada completada; verificación manual pendiente
+Estado: Implementación y validación completadas
 Spec: spec.md
 Plan: plan.md
 HU: ../../docs/historias/HU-003.md
@@ -29,7 +29,9 @@ HU: ../../docs/historias/HU-003.md
 - [x] **T8. Implementar proveedor de sesión persistente.** RF-1 a RF-9.
   Hecho cuando: layout hidrata y persiste transiciones, se deriva restante de
   `endsAt`, notificaciones siguen el estado, pasan T7 y TypeScript.
-- [ ] **T9. Verificar HU-003 en Android.** RF-1 a RF-8.
+- [x] **T9. Verificar HU-003 en Android.** RF-1 a RF-8.
   Hecho cuando: se cierra/abre la app, se compara restante, se valida pausa,
   permiso y aviso local y se registra el resultado y limitaciones.
-  Pendiente: prueba manual en dispositivo/emulador Android.
+  Resultado: el usuario confirma la validación manual en Android del cierre y
+  reapertura, el restante, la pausa, el permiso y el aviso local. No se
+  registraron modelo ni versión del dispositivo.

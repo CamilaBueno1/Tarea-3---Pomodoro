@@ -1,6 +1,6 @@
 # Tareas – Temporizador de estudio
 
-Estado: aprobado
+Estado: aprobado y completado
 Spec: [spec.md](./spec.md)  
 Plan aprobado: [plan.md](./plan.md)  
 HU: [HU-001](../../docs/historias/HU-001.md)
@@ -60,13 +60,15 @@ HU: [HU-001](../../docs/historias/HU-001.md)
   Hecho cuando: el diálogo del sistema precede al reinicio; confirmar restaura
   el tiempo inicial conservando el estado previo, cancelar o descartar deja
   intactos tiempo y estado, y pasan las pruebas de T8.
-- [ ] **T10. Validar la historia en Expo Go o emulador Android.** RF-1 a RF-6.
+- [x] **T10. Validar la historia en Expo Go o emulador Android.** RF-1 a RF-6.
   Hecho cuando: se comprueban vertical y giro, áreas seguras, visibilidad de
   controles, lectura clara del estado sin depender solo del color, inicio,
   pausa, reanudación, reinicio confirmado/cancelado y accesibilidad. Los
   puntos sobre teclado y ajustes de duración no aplican porque esta historia
   no contiene formularios; persistencia al cerrar queda fuera de alcance
   (HU-003). Registrar el resultado antes de cerrar la tarea.
+  Resultado: validación manual en Android confirmada por el usuario. No se
+  registraron modelo ni versión del dispositivo.
 
 ## Dependencias y límite de alcance
 

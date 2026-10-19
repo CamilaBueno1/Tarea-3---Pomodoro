@@ -1,6 +1,6 @@
 # Plan técnico – HU-004
 
-Estado: Borrador
+Estado: Aprobado y completado
 Spec: [spec.md](./spec.md)
 HU: [HU-004](../../docs/historias/HU-004.md)
 
