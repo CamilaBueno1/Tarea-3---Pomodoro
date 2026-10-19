@@ -2,16 +2,15 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 
 ## Estado actual
-- HU-001–HU-005 están implementadas; las verificaciones manuales Android de
-  permisos, notificaciones y pantallas siguen pendientes.
-- HU-004 documenta las notificaciones locales, sus límites y permisos en
-  `specs/004-hu004-notificaciones/`.
-- En Expo Go, las operaciones de permisos y avisos no cargan ni invocan el
-  módulo nativo; el temporizador mantiene su funcionamiento sin avisos.
+- HU-001–HU-005 están implementadas; la verificación manual Android de
+  permisos, notificaciones y pantallas sigue pendiente.
+- HU-006 documenta el uso sin registro, sin internet y sin publicidad en
+  `specs/006-hu006-offline-sin-anuncios/`.
+- Se añadió la documentación general del proyecto en `README.md`, con
+  descripción, instalación, uso y estructura del repositorio.
 - Expo Router agrupa Temporizador y Ajustes bajo `(tabs)`; las rutas web son
   `/` y `/settings`.
 - Verificación anterior: 96 pruebas, TypeScript y exportación Android pasan.
-  La regresión del módulo nativo pasa pruebas dirigidas y TypeScript.
   No hay dispositivo conectado para la validación manual.
 
 ## Decisiones (y por qué)
@@ -21,8 +20,9 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - (vacío por ahora)
 
 ## Próximos pasos
-- Confirmar en Expo Go que el temporizador abre sin el error del módulo nativo.
-- Crear un development build y validar notificaciones locales y permisos en
-  Android real, incluyendo restricciones de sonido y vibración.
-- Resolver la decisión pendiente de silencio/No molestar de HU-004.
-- Siguiente comando: `/sdd-verify 004-hu004-notificaciones`.
+- Validar en Expo Go la historia HU-006 para confirmar que el flujo de
+  primer uso, la persistencia local y la ausencia de publicidad cumplen la
+  especificación.
+- Crear una verificación de Android real para revisar restricciones del
+  sistema operativo y la disponibilidad de avisos sin conexión.
+- Siguiente comando: `/sdd-verify 006-hu006-offline-sin-anuncios`.
