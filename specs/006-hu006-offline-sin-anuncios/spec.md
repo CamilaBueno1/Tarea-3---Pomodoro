@@ -1,13 +1,18 @@
-# Spec 006 - Usar la aplicación sin registro, sin internet y sin publicidad
+# Spec 006 - Uso sin registro, sin internet y sin publicidad
 
-Estado: borrador
+Estado: aprobada
 HU de origen: docs/historias/HU-006.md
 
 ## Contexto y objetivo
 
-Permitir que el estudiante empiece a usar la aplicación sin crear una cuenta,
-continúe usando el temporizador, los avisos y los ajustes sin conexión a
-internet, conserve sus ajustes en el dispositivo y no vea anuncios.
+Permitir que el estudiante empiece a usar Cotopaxi Focus sin crear una cuenta,
+que pueda utilizar las funciones de la aplicación sin conexión a internet y
+que no encuentre publicidad durante su uso.
+
+Esta especificación desarrolla HU-006. Los comportamientos del temporizador,
+los avisos y los ajustes permanecen definidos por HU-001 a HU-005,
+respectivamente; esta historia establece que su uso no debe requerir
+conectividad.
 
 ## Usuarios
 
@@ -20,53 +25,64 @@ cuenta, sin datos móviles y sin anuncios, para empezar a estudiar sin trabas.
 
 ## Requisitos funcionales
 
-- **RF-1:** CUANDO el estudiante abre por primera vez la aplicación recién
-  instalada, EL SISTEMA muestra directamente el temporizador sin mostrar ni
-  exigir pantallas de registro o inicio de sesión. Origen: HU-006, escenario
+- **RF-1:** CUANDO el estudiante abre la aplicación por primera vez después de
+  instalarla, EL SISTEMA muestra directamente el temporizador sin presentar
+  una pantalla de registro ni de inicio de sesión. Origen: HU-006, escenario
   «Abrir la aplicación por primera vez».
 - **RF-2:** CUANDO el estudiante usa el temporizador, los avisos o los ajustes
-  sin datos móviles ni Wi-Fi, EL SISTEMA mantiene disponibles esas funciones
-  sin requerir conexión a internet. Origen: HU-006, escenario «Usarla sin
+  sin conexión a internet, EL SISTEMA permite utilizar esas funciones sin
+  requerir conexión, conforme a sus comportamientos definidos en HU-001 a
+  HU-005. Origen: HU-006, escenario «Usarla sin conexión».
+- **RF-3:** CUANDO el estudiante modifica ajustes sin conexión a internet, EL
+  SISTEMA conserva esos ajustes en el celular para que sigan disponibles al
+  volver a usar la aplicación. Origen: HU-006, escenario «Usarla sin
   conexión».
-- **RF-3:** CUANDO el estudiante usa los ajustes sin conexión a internet, EL
-  SISTEMA conserva los ajustes en el dispositivo para que su disponibilidad no
-  dependa de una conexión a internet. Origen: HU-006, escenario «Usarla sin
-  conexión».
-- **RF-4:** EL SISTEMA no muestra anuncios en ninguna de sus pantallas. Origen:
-  HU-006, escenario «Usarla sin publicidad».
+- **RF-4:** EL SISTEMA no presenta anuncios en ninguna de sus pantallas ni
+  durante el uso de la aplicación. Origen: HU-006, escenario «Usarla sin
+  publicidad».
 
 ## Requisitos no funcionales
 
-No se identifican requisitos no funcionales adicionales en HU-006.
+- El uso descrito en esta especificación no depende de datos móviles ni de
+  conexión Wi-Fi.
+- Los avisos mantienen las capacidades y limitaciones definidas en HU-004;
+  esta especificación no añade garantías de entrega, sonido o vibración bajo
+  restricciones del sistema operativo.
+- La aplicación no requiere registro ni inicio de sesión para el flujo descrito
+  en HU-006.
 
 ## Casos límite
 
-- El estudiante abre la aplicación por primera vez sin haber creado una cuenta.
-- El estudiante utiliza el temporizador, los avisos y los ajustes con los
-  datos móviles y Wi-Fi desactivados.
-- El estudiante recorre cualquiera de las pantallas de la aplicación.
+- La primera apertura ocurre sin conexión: el temporizador sigue siendo el
+  destino inicial y no aparece un flujo de registro o inicio de sesión.
+- La conexión se pierde mientras se usan el temporizador, los avisos o los
+  ajustes: la falta de conexión no debe impedir el uso de esas funciones.
+- Los ajustes modificados sin conexión siguen disponibles en un uso posterior.
+- La ausencia de anuncios aplica a todas las pantallas, no solo al
+  temporizador.
 
 ## Fuera de alcance
 
-- Definir comportamientos de temporizador, avisos o ajustes que no estén
-  descritos en HU-006.
-- Afirmar que el sistema operativo o el dispositivo entregará un aviso bajo
-  cualquier condición.
+- Los detalles del temporizador, sus fases y su persistencia, cubiertos por
+  HU-001, HU-002 y HU-003.
+- La configuración de ajustes, cubierta por HU-005.
+- Las capacidades, permisos y restricciones de los avisos, cubiertos por
+  HU-004.
+- Cambios en la lógica funcional de esas historias.
 
 ## Criterios de finalización
 
-- RF-1 se verifica abriendo la aplicación recién instalada y comprobando que
-  se presenta el temporizador sin flujo de registro o inicio de sesión.
-- RF-2 y RF-3 se verifican usando el temporizador, los avisos y los ajustes
-  sin datos móviles ni Wi-Fi, y comprobando que los ajustes se conservan en el
-  dispositivo.
-- RF-4 se verifica recorriendo todas las pantallas y comprobando que no se
-  muestra ningún anuncio.
+- RF-1 se verifica con la primera apertura y comprobando que se muestra el
+  temporizador sin pantallas de registro o inicio de sesión.
+- RF-2 se verifica con el dispositivo sin datos móviles ni Wi-Fi, usando el
+  temporizador, los avisos y los ajustes conforme a las historias que los
+  definen.
+- RF-3 se verifica guardando ajustes sin conexión y comprobando que siguen
+  disponibles después de cerrar y volver a abrir la aplicación.
+- RF-4 se verifica revisando las pantallas de la aplicación y confirmando que
+  no se presenta publicidad.
 
 ## Dudas abiertas
 
-- [NECESITA ACLARACIÓN] El escenario «Usarla sin conexión» indica que «todo
-  funciona igual», incluidos los avisos, pero no precisa si esto significa que
-  están disponibles sin conexión a internet o si exige garantizar su entrega
-  incluso cuando existan restricciones del sistema operativo o del
-  dispositivo. Esta spec no establece tal garantía.
+- Ninguna propia de HU-006. Los permisos y las limitaciones de los avisos
+  siguen sujetos a HU-004; HU-006 no añade ni cambia esas reglas.

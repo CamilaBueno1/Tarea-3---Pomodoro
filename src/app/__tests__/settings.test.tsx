@@ -107,6 +107,23 @@ describe("pomodoro settings screen", () => {
     expect(screen.getByText(/1 a 12 pomodoros/)).toBeTruthy();
   });
 
+  it("shows a visible error instead of the form when settings cannot be loaded", async () => {
+    mockUsePomodoroSettings.mockReturnValue({
+      settings: DEFAULT_POMODORO_SETTINGS,
+      status: "error",
+      error: new Error("almacenamiento no disponible"),
+      saveSettings: mockSaveSettings,
+    });
+
+    await render(<SettingsScreen />);
+
+    expect(
+      screen.getByText("No se pudieron cargar los ajustes guardados."),
+    ).toBeTruthy();
+    expect(screen.getByText("almacenamiento no disponible")).toBeTruthy();
+    expect(screen.queryByLabelText("Duración de estudio en minutos")).toBeNull();
+  });
+
   it("rejects empty and out-of-range values without saving", async () => {
     await render(<SettingsScreen />);
 
@@ -193,6 +210,31 @@ describe("pomodoro settings screen", () => {
     expect(toastMessage.parent?.parent?.props.style).toEqual(
       expect.objectContaining({ position: "absolute", top: 8 }),
     );
+  });
+
+  it("shows a visible error and no success message when saving fails", async () => {
+    mockSaveSettings.mockRejectedValueOnce(
+      new Error("almacenamiento no disponible"),
+    );
+    await render(<SettingsScreen />);
+
+    await fireEvent.changeText(
+      screen.getByLabelText("Duración de estudio en minutos"),
+      "40",
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Guardar ajustes" }),
+    );
+    await actPressAlertButton("Guardar");
+
+    expect(
+      await screen.findByText(
+        "No se pudieron guardar los ajustes. almacenamiento no disponible",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Ajustes guardados correctamente."),
+    ).toBeNull();
   });
 
   it("does not save valid changes when confirmation is canceled", async () => {

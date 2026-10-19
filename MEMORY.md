@@ -4,8 +4,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 ## Estado actual
 - HU-001–HU-005 están implementadas; la verificación manual Android de
   permisos, notificaciones y pantallas sigue pendiente.
-- HU-006 documenta el uso sin registro, sin internet y sin publicidad en
-  `specs/006-hu006-offline-sin-anuncios/`.
+- HU-006 tiene spec y plan aprobados; T1–T5 de sus tareas están completadas,
+  y T6–T10 siguen pendientes en `specs/006-hu006-offline-sin-anuncios/`.
 - Se añadió la documentación general del proyecto en `README.md`, con
   descripción, instalación, uso y estructura del repositorio.
 - Expo Router agrupa Temporizador y Ajustes bajo `(tabs)`; las rutas web son
@@ -20,9 +20,6 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - (vacío por ahora)
 
 ## Próximos pasos
-- Validar en Expo Go la historia HU-006 para confirmar que el flujo de
-  primer uso, la persistencia local y la ausencia de publicidad cumplen la
-  especificación.
-- Crear una verificación de Android real para revisar restricciones del
-  sistema operativo y la disponibilidad de avisos sin conexión.
-- Siguiente comando: `/sdd-verify 006-hu006-offline-sin-anuncios`.
+- Continuar HU-006 con T6, revisando manifiestos, navegación y dependencias.
+- Después, implementar una tarea por vez con:
+  `/sdd-implement 006-hu006-offline-sin-anuncios T6`.

@@ -77,6 +77,10 @@ describe("Pomodoro home screen", () => {
     expect(screen.getByText("Estudio listo")).toBeTruthy();
     expect(screen.getByText("25:00")).toBeTruthy();
     expect(screen.getByText("Pomodoros completados: 1 de 4")).toBeTruthy();
+    expect(screen.queryByText(/registro|iniciar sesión/i)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /registro|iniciar sesión/i }),
+    ).toBeNull();
     expect(
       screen.getByRole("button", { name: "Iniciar estudio" }),
     ).toBeTruthy();
