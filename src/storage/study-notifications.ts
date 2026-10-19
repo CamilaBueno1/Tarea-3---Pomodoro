@@ -9,7 +9,7 @@ type NotificationPermissionsStatus =
   import("expo-notifications").NotificationPermissionsStatus;
 
 const STUDY_END_NOTIFICATION_ID_KEY = "@cotopaxi/study-end-notification-id";
-const STUDY_NOTIFICATION_CHANNEL_ID = "pomodoro-phase-end-high";
+const STUDY_NOTIFICATION_CHANNEL_ID = "default";
 const STUDY_NOTIFICATION_VIBRATION_PATTERN = [0, 250, 250, 250];
 let notificationsModulePromise: Promise<NotificationsModule | null> | null =
   null;
@@ -39,11 +39,13 @@ function loadNotificationsModule(): Promise<NotificationsModule | null> {
       const notifications: NotificationsModule = require("expo-notifications");
       notifications.setNotificationHandler({
         handleNotification: async () => ({
+          shouldShowAlert: true,
           shouldShowBanner: true,
           shouldShowList: true,
           shouldPlaySound: true,
           shouldSetBadge: false,
           shouldVibrate: true,
+          priority: notifications.AndroidNotificationPriority.MAX,
         }),
       });
       return notifications;
@@ -69,12 +71,21 @@ async function configureAndroidChannel(
   await notifications.setNotificationChannelAsync(
     STUDY_NOTIFICATION_CHANNEL_ID,
     {
-      name: "Fin de fase Pomodoro",
+      name: "Pomodoro Notifications",
       importance: notifications.AndroidImportance.HIGH,
       vibrationPattern: STUDY_NOTIFICATION_VIBRATION_PATTERN,
       sound: "default",
     },
   );
+}
+
+export async function configureStudyNotifications(): Promise<void> {
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return;
+  }
+
+  await configureAndroidChannel(notifications);
 }
 
 function hasNotificationPermission(
@@ -89,6 +100,7 @@ export async function getStudyNotificationPermission(): Promise<boolean> {
     return false;
   }
 
+  await configureAndroidChannel(notifications);
   const permissions = await notifications.getPermissionsAsync();
   return hasNotificationPermission(permissions);
 }
@@ -156,6 +168,7 @@ export async function scheduleStudyEndNotification(
       data: { phase },
       sound: "default",
       vibrate: STUDY_NOTIFICATION_VIBRATION_PATTERN,
+      priority: notifications.AndroidNotificationPriority.MAX,
     },
     trigger: {
       type: notifications.SchedulableTriggerInputTypes.DATE,
@@ -175,6 +188,25 @@ export async function scheduleStudyEndNotification(
     await notifications.cancelScheduledNotificationAsync(notificationId);
     throw error;
   }
+}
+
+export async function notifyStudyPhaseCompleted(): Promise<void> {
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return;
+  }
+
+  await configureAndroidChannel(notifications);
+  await notifications.scheduleNotificationAsync({
+    content: {
+      title: "¡Tiempo finalizado!",
+      body: "Tu sesión ha concluido.",
+      sound: true,
+      vibrate: STUDY_NOTIFICATION_VIBRATION_PATTERN,
+      priority: notifications.AndroidNotificationPriority.MAX,
+    },
+    trigger: null,
+  });
 }
 
 export function addStudyNotificationResponseListener(

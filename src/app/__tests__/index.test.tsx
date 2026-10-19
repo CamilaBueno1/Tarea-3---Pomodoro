@@ -112,7 +112,54 @@ describe("Pomodoro home screen", () => {
 
     await render(<HomeScreen />);
 
-    expect(screen.getByText("Estudio terminado. Descanso corto listo")).toBeTruthy();
+    expect(
+      screen.getByText("Estudio terminado. Descanso corto listo"),
+    ).toBeTruthy();
+    expect(screen.getByTestId("phase-completion-notice")).toBeTruthy();
+    expect(screen.getByText("¡Estudio terminado!")).toBeTruthy();
+    expect(
+      screen.getByText("Descanso corto está listo para iniciar."),
+    ).toBeTruthy();
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it("alerts when a running phase finishes and asks the user to start the next cycle", async () => {
+    setTimerState("running", 1_000, "00:01");
+    const { rerender } = await render(<HomeScreen />);
+
+    mockedUsePomodoroSession.mockReturnValue({
+      session: {
+        status: "ready",
+        phase: "shortBreak",
+        initialDurationMs: 5 * 60 * 1_000,
+        remainingMs: 5 * 60 * 1_000,
+        completedPomodoros: 1,
+        cycleTarget: 4,
+        lastCompletedPhase: "study",
+      },
+      status: "ready",
+      remainingMs: 5 * 60 * 1_000,
+      formattedRemainingTime: "05:00",
+      notificationPermissionGranted: true,
+      notificationError: null,
+      error: null,
+      start: mockStart,
+      pause: mockPause,
+      resume: mockResume,
+      restart: mockRestart,
+      requestPermission: mockRequestPermission,
+    });
+
+    await rerender(<HomeScreen />);
+
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy).toHaveBeenCalledWith(
+      "¡Tiempo finalizado!",
+      "El período de estudio ha concluido. Presiona Iniciar para el siguiente ciclo.",
+    );
+
+    await rerender(<HomeScreen />);
+    expect(alertSpy).toHaveBeenCalledTimes(1);
   });
 
   it("starts the timer directly when notifications are granted", async () => {

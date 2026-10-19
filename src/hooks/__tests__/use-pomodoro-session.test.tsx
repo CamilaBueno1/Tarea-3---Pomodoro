@@ -5,6 +5,7 @@ import {
   getStudyNotificationPermission,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
+  notifyStudyPhaseCompleted,
 } from "../../storage/study-notifications";
 import { loadStudySession, saveStudySession } from "../../storage/study-session-storage";
 import {
@@ -33,6 +34,7 @@ jest.mock("../../storage/study-notifications", () => ({
   getStudyNotificationPermission: jest.fn(),
   requestStudyNotificationPermission: jest.fn(),
   scheduleStudyEndNotification: jest.fn(),
+  notifyStudyPhaseCompleted: jest.fn(),
 }));
 
 const mockUseSettings = jest.mocked(usePomodoroSettings);
@@ -43,6 +45,7 @@ const mockRequestPermission = jest.mocked(
   requestStudyNotificationPermission,
 );
 const mockScheduleNotification = jest.mocked(scheduleStudyEndNotification);
+const mockNotifyPhaseCompleted = jest.mocked(notifyStudyPhaseCompleted);
 const mockCancelNotification = jest.mocked(cancelStudyEndNotification);
 const settings: PomodoroSettings = {
   ...DEFAULT_POMODORO_SETTINGS,
@@ -69,11 +72,13 @@ describe("Pomodoro session hook", () => {
     mockGetPermission.mockResolvedValue(true);
     mockRequestPermission.mockResolvedValue(true);
     mockScheduleNotification.mockResolvedValue(undefined);
+    mockNotifyPhaseCompleted.mockResolvedValue(undefined);
     mockCancelNotification.mockResolvedValue(undefined);
     jest.spyOn(Date, "now").mockReturnValue(1_000_000);
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
@@ -170,6 +175,36 @@ describe("Pomodoro session hook", () => {
     });
     expect(result.current.session?.status).toBe("running");
     expect(mockScheduleNotification).toHaveBeenCalledTimes(2);
+  });
+
+  it("replaces the scheduled notification with an immediate notification when a phase completes", async () => {
+    const { result } = await renderHook(() => usePomodoroSession(), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    jest.useFakeTimers();
+
+    await act(async () => {
+      await result.current.start();
+    });
+    const runningSession = result.current.session;
+    expect(runningSession?.status).toBe("running");
+    if (runningSession?.status !== "running") {
+      throw new Error("Expected the study session to be running.");
+    }
+
+    mockCancelNotification.mockClear();
+    jest.spyOn(Date, "now").mockReturnValue(runningSession.endsAt);
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(1_000);
+    });
+
+    expect(result.current.session).toMatchObject({
+      status: "ready",
+      phase: "shortBreak",
+      lastCompletedPhase: "study",
+    });
+    expect(mockCancelNotification).toHaveBeenCalledTimes(1);
+    expect(mockNotifyPhaseCompleted).toHaveBeenCalledTimes(1);
   });
 
   it("continues timer state and exposes an error when persistence fails", async () => {

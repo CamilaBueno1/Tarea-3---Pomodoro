@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -28,8 +28,29 @@ const phaseNames: Record<PomodoroPhase, string> = {
 
 export default function HomeScreen() {
   const timer = usePomodoroSession();
+  const previousSessionRef = useRef(timer.session);
   const [hasExplainedNotificationPermission, setHasExplainedNotificationPermission] =
     useState(false);
+
+  useEffect(() => {
+    const previousSession = previousSessionRef.current;
+    const currentSession = timer.session;
+
+    if (
+      previousSession?.status === 'running' &&
+      currentSession?.status === 'ready' &&
+      currentSession.lastCompletedPhase === previousSession.phase
+    ) {
+      const completedPeriod =
+        previousSession.phase === 'study' ? 'estudio' : 'descanso';
+      Alert.alert(
+        '¡Tiempo finalizado!',
+        `El período de ${completedPeriod} ha concluido. Presiona Iniciar para el siguiente ciclo.`,
+      );
+    }
+
+    previousSessionRef.current = currentSession;
+  }, [timer.session]);
 
   if (timer.status === 'loading') {
     return <StatusMessage message="Cargando tu sesión…" />;
@@ -134,6 +155,20 @@ export default function HomeScreen() {
             <Text accessibilityLiveRegion="polite" style={styles.statusMessage}>
               {phaseStatus}
             </Text>
+
+            {session.status === 'ready' && session.lastCompletedPhase ? (
+              <View
+                accessibilityLiveRegion="assertive"
+                style={styles.completionNotice}
+                testID="phase-completion-notice">
+                <Text accessibilityRole="alert" style={styles.completionTitle}>
+                  ¡{phaseNames[session.lastCompletedPhase]} terminado!
+                </Text>
+                <Text style={styles.completionMessage}>
+                  {phaseNames[session.phase]} está listo para iniciar.
+                </Text>
+              </View>
+            ) : null}
 
             {/* Display de tiempo restante */}
             <View style={styles.timeContainer}>
@@ -418,6 +453,27 @@ const styles = StyleSheet.create({
   statusMessage: {
     color: CotopaxiColors.secondaryText,
     fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  completionNotice: {
+    width: '100%',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: 16,
+    backgroundColor: CotopaxiColors.success,
+  },
+  completionTitle: {
+    color: CotopaxiColors.white,
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  completionMessage: {
+    color: CotopaxiColors.white,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
   },

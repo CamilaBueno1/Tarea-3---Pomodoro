@@ -7,9 +7,11 @@ import { Platform } from "react-native";
 import {
   cancelStudyEndNotification,
   addStudyNotificationResponseListener,
+  configureStudyNotifications,
   getStudyNotificationPermission,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
+  notifyStudyPhaseCompleted,
 } from "../study-notifications";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -29,6 +31,7 @@ jest.mock("expo-constants", () => ({
 jest.mock("expo-notifications", () => ({
   __esModule: true,
   AndroidImportance: { DEFAULT: 3, HIGH: 4 },
+  AndroidNotificationPriority: { MAX: "max" },
   SchedulableTriggerInputTypes: { DATE: "date" },
   setNotificationHandler: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
@@ -49,6 +52,9 @@ const mockRequestPermissions = jest.mocked(
 );
 const mockScheduleNotification = jest.mocked(
   Notifications.scheduleNotificationAsync,
+);
+const mockSetNotificationHandler = jest.mocked(
+  Notifications.setNotificationHandler,
 );
 const mockSetNotificationChannel = jest.mocked(
   Notifications.setNotificationChannelAsync,
@@ -91,6 +97,39 @@ describe("study end notifications", () => {
 
     await expect(requestStudyNotificationPermission()).resolves.toBe(true);
     expect(mockRequestPermissions).toHaveBeenCalledTimes(1);
+    const handler = mockSetNotificationHandler.mock.calls[0]?.[0];
+    if (handler === undefined || handler === null) {
+      throw new Error(
+        "The foreground notification handler was not configured.",
+      );
+    }
+
+    const behavior = await handler.handleNotification({
+      date: Date.now(),
+      request: {
+        identifier: "notification-id",
+        content: {
+          title: "Temporizador",
+          subtitle: null,
+          body: "Finalizó la fase.",
+          data: {},
+          categoryIdentifier: null,
+          sound: "default",
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: Date.now(),
+        },
+      },
+    });
+    expect(behavior).toMatchObject({
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      priority: Notifications.AndroidNotificationPriority.MAX,
+    });
   });
 
   it("does not request permission again when the user has denied it", async () => {
@@ -103,6 +142,24 @@ describe("study end notifications", () => {
 
     await expect(requestStudyNotificationPermission()).resolves.toBe(false);
     expect(mockRequestPermissions).not.toHaveBeenCalled();
+  });
+
+  it("configures the default high-importance Android notification channel", async () => {
+    const originalPlatform = Platform.OS;
+    Platform.OS = "android";
+
+    try {
+      await configureStudyNotifications();
+
+      expect(mockSetNotificationChannel).toHaveBeenCalledWith("default", {
+        name: "Pomodoro Notifications",
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: "default",
+      });
+    } finally {
+      Platform.OS = originalPlatform;
+    }
   });
 
   it("schedules a notification with the phase and absolute end timestamp", async () => {
@@ -120,17 +177,19 @@ describe("study end notifications", () => {
           data: { phase: "shortBreak" },
           sound: "default",
           vibrate: [0, 250, 250, 250],
+          priority: Notifications.AndroidNotificationPriority.MAX,
         },
         trigger: {
           type: "date",
           date: new Date(endsAt),
-          channelId: "pomodoro-phase-end-high",
+          channelId: "default",
         },
       });
       expect(mockSetNotificationChannel).toHaveBeenCalledWith(
-        expect.any(String),
+        "default",
         expect.objectContaining({
           importance: 4,
+          name: "Pomodoro Notifications",
           vibrationPattern: [0, 250, 250, 250],
           sound: "default",
         }),
@@ -142,6 +201,21 @@ describe("study end notifications", () => {
     } finally {
       Platform.OS = originalPlatform;
     }
+  });
+
+  it("sends an immediate notification when a phase completes", async () => {
+    await notifyStudyPhaseCompleted();
+
+    expect(mockScheduleNotification).toHaveBeenCalledWith({
+      content: {
+        title: "¡Tiempo finalizado!",
+        body: "Tu sesión ha concluido.",
+        sound: true,
+        vibrate: [0, 250, 250, 250],
+        priority: Notifications.AndroidNotificationPriority.MAX,
+      },
+      trigger: null,
+    });
   });
 
   it("replaces and cancels only the scheduled study notification", async () => {

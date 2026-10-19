@@ -23,6 +23,7 @@ import {
 import {
   addStudyNotificationResponseListener,
   cancelStudyEndNotification,
+  notifyStudyPhaseCompleted,
   getStudyNotificationPermission,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
@@ -91,10 +92,17 @@ export function PomodoroSessionProvider({
     ) => {
       setError(null);
 
-      try {
-        await cancelStudyEndNotification();
-      } catch (cancelError: unknown) {
-        setNotificationError(toError(cancelError));
+      const phaseCompleted =
+        previousSession?.status === "running" &&
+        nextSession.status === "ready" &&
+        nextSession.lastCompletedPhase === previousSession.phase;
+
+      if (!phaseCompleted) {
+        try {
+          await cancelStudyEndNotification();
+        } catch (cancelError: unknown) {
+          setNotificationError(toError(cancelError));
+        }
       }
 
       try {
@@ -105,7 +113,8 @@ export function PomodoroSessionProvider({
 
         if (
           previousSession?.status === "running" &&
-          notificationsEnabled
+          notificationsEnabled &&
+          !phaseCompleted
         ) {
           try {
             await scheduleStudyEndNotification(
@@ -125,7 +134,23 @@ export function PomodoroSessionProvider({
       setStatus("ready");
       setError(null);
 
-      if (nextSession.status === "running") {
+      if (phaseCompleted) {
+        let completionNotificationError: Error | null = null;
+        try {
+          await cancelStudyEndNotification();
+        } catch (cancelError: unknown) {
+          completionNotificationError = toError(cancelError);
+        }
+
+        if (notificationsEnabled) {
+          try {
+            await notifyStudyPhaseCompleted();
+          } catch (notificationFailure: unknown) {
+            completionNotificationError = toError(notificationFailure);
+          }
+        }
+        setNotificationError(completionNotificationError);
+      } else if (nextSession.status === "running") {
         if (notificationsEnabled) {
           try {
             await scheduleStudyEndNotification(
