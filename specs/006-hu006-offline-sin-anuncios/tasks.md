@@ -21,8 +21,9 @@ ausencia visible de anuncios requieren validación manual.
 - [x] **T5. Verificar la presentación de ajustes y errores de operación (20–30 min).** RF-3
   Hecho cuando: `src/app/__tests__/settings.test.tsx` pasa y comprueba los estados y mensajes existentes de ajustes, incluido que un fallo de carga o guardado no se presenta como éxito; cualquier ajuste se limita a la prueba de pantalla existente.
 
-- [ ] **T6. Revisar manifiestos, navegación y dependencias contra anuncios, cuentas y red (20–30 min).** RF-1, RF-2, RF-3, RF-4
+- [x] **T6. Revisar manifiestos, navegación y dependencias contra anuncios, cuentas y red (20–30 min).** RF-1, RF-2, RF-3, RF-4
   Hecho cuando: se revisan `app.json`, `package.json`, la navegación Expo Router y las pantallas previstas en `plan.md`; queda registrado si existe alguna integración declarada de publicidad, autenticación o servicios de red, sin añadir dependencias, rutas ni permisos.
+  Resultado: los manifiestos declaran Expo Router, notificaciones locales y dependencias de interfaz/almacenamiento; no declaran SDK de anuncios, autenticación ni servicios de red. El componente `ExternalLink` no tiene usos. La navegación y las rutas Temporizador/Ajustes se revisaron; no se añadieron dependencias, rutas ni permisos.
 
 - [ ] **T7. Validar manualmente la primera apertura limpia (20–30 min).** RF-1
   Hecho cuando: en una instalación limpia o tras restablecer los datos se comprueba que la primera apertura muestra el temporizador, sin pantalla de registro ni inicio de sesión.
@@ -39,3 +40,4 @@ ausencia visible de anuncios requieren validación manual.
 - [ ] **T10. Revisar ausencia visible de anuncios y ejecutar regresión completa (20–30 min).** RF-1, RF-2, RF-3, RF-4
   Hecho cuando: se recorren las pantallas y rutas accesibles y se confirma que no aparece publicidad; además, `npx jest` pasa. La revisión visual, no Jest, es la comprobación de ausencia de anuncios.
   Depende de: T1–T9.
+  Avance: `npx jest --runInBand` pasó (10 suites, 98 pruebas) y una revisión visual local en web de Temporizador y Ajustes no mostró anuncios. T10 permanece pendiente hasta completar las validaciones manuales T7–T9.
