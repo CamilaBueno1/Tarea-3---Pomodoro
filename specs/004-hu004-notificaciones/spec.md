@@ -1,14 +1,22 @@
 # Spec 004 - Aviso al finalizar la fase
 
-Estado: Aprobada y completada
+Estado: Aprobada para implementación
 HU de origen: docs/historias/HU-004.md
 Decisiones: decisiones.md
 
 ## Contexto y objetivo
 
-Asegurar que el estudiante reciba un aviso claro cuando una fase de estudio o descanso termina, incluso si el celular está en modo silencioso, sin depender de que la aplicación permanezca abierta en pantalla.
+Avisar al estudiante cuando termina una fase de estudio o descanso. Con la
+aplicación en primer plano, se muestra una pantalla de alarma con señales
+continuas mientras esa pantalla permanezca visible. En segundo plano, con la
+aplicación cerrada o el teléfono bloqueado, se solicita una sola entrega de
+notificación local. Ninguna señal ni puntualidad se garantiza frente a las
+restricciones del sistema operativo o del dispositivo.
 
-Esta propuesta desarrolla HU-004. La lógica del temporizador y la transición de fases siguen perteneciendo a HU-001 y HU-002; la persistencia y el cierre de la app ya quedaron cubiertos por HU-003.
+La transición de fases pertenece a HU-001/HU-002 y la persistencia de la sesión
+a HU-003. HU-004 conserva su condición de línea base histórica; los cambios
+aprobados del comportamiento al tocar el cuerpo de la notificación se registran
+en D-011.
 
 ## Usuarios
 
@@ -16,47 +24,124 @@ Esta propuesta desarrolla HU-004. La lógica del temporizador y la transición d
 
 ## Requisitos funcionales
 
-- **RF-1:** CUANDO una fase llega a cero, EL SISTEMA activa un aviso local que identifica la fase terminada para que el estudiante pueda cambiar de actividad sin mirar la pantalla. Origen: HU-004, escenario «Aviso con el celular en sonido».
-- **RF-2:** CUANDO el teléfono tiene el sonido activado, EL SISTEMA emite una notificación con sonido y vibración para informar que la fase terminó. Origen: HU-004, escenario «Aviso con el celular en sonido».
-- **RF-3:** CUANDO el teléfono está en modo silencio o vibración, EL SISTEMA intenta avisar con alarma y vibración y presenta el aviso en la pantalla de bloqueo. Origen: HU-004, escenario «Aviso con el celular en silencio».
-- **RF-4:** CUANDO el estudiante toca la notificación o el botón de detener del aviso, EL SISTEMA silencia la alarma y abre la aplicación mostrando la siguiente fase. Origen: HU-004, escenario «Detener el aviso».
-- **RF-5:** CUANDO la aplicación necesita consultar el permiso de notificaciones por primera vez, EL SISTEMA explica para qué lo solicita y lo pide explícitamente antes de usar el aviso. Origen: HU-004, escenario «Permiso de notificaciones».
-- **RF-6:** SI el estudiante no concede el permiso de notificaciones, ENTONCES EL SISTEMA informa la limitación y conserva el funcionamiento del temporizador sin afirmar una notificación garantizada. Origen: HU-004, escenario «Permiso de notificaciones».
-- **RF-7:** CUANDO el sistema operativo, el fabricante o la configuración del dispositivo restringen sonido, vibración o alarma en silencio o No molestar, EL SISTEMA no promete que el aviso evada esa restricción y lo comunica de forma clara al estudiante. Origen: nota de implementación de HU-004 y decisión documentada en `decisiones.md`.
+- **RF-1:** MIENTRAS una fase temporizada está activa, EL SISTEMA programa una
+  notificación local para su hora de finalización; en Android 12 o posterior
+  solicita la programación exacta si el acceso especial «Alarmas y
+  recordatorios» está concedido. SI ese acceso no está concedido, el sistema
+  puede retrasar la notificación; CUANDO el estudiante vuelve después de la
+  hora de finalización, EL SISTEMA reconcilia la fase con el tiempo persistido.
+  Origen: HU-004, escenario «Aviso con el celular en sonido»; decisiones D-007
+  y D-010.
+- **RF-2:** CUANDO termina una fase con la aplicación en segundo plano o
+  cerrada, EL SISTEMA solicita una notificación local de una sola entrega que
+  identifica la fase terminada y solicita sonido y vibración. Origen: HU-004,
+  escenario «Aviso con el celular en sonido»; decisiones D-001 y D-008.
+- **RF-3:** CUANDO el teléfono está en silencio o vibración, EL SISTEMA solicita
+  para la notificación una señal con comportamiento de alarma, vibración y
+  presentación en la pantalla de bloqueo. EL SISTEMA no garantiza que el
+  sistema operativo, el fabricante o la configuración permitan esas señales ni
+  que se superen silencio o No molestar. Origen: HU-004, escenario «Aviso con
+  el celular en silencio»; decisión D-001.
+- **RF-4:** CUANDO el estudiante toca el cuerpo de una notificación de fin de
+  fase, EL SISTEMA abre la aplicación y muestra la pantalla de alarma para la
+  fase terminada. CUANDO selecciona la acción de notificación «Detener», EL
+  SISTEMA conserva el comportamiento existente: descarta y silencia la
+  notificación y abre la aplicación en la siguiente fase del Pomodoro. Origen:
+  HU-004, escenario «Detener el aviso»; decisión D-005, ajustada por D-011.
+- **RF-5:** CUANDO la aplicación necesita notificaciones por primera vez, EL
+  SISTEMA explica su propósito y solicita permiso antes de usarlas. Origen:
+  HU-004, escenario «Permiso de notificaciones»; decisión D-002.
+- **RF-6:** SI el permiso de notificaciones no está concedido, ENTONCES EL
+  SISTEMA comunica «avisos desactivados» según el permiso consultado al abrir y
+  conserva el funcionamiento del temporizador. CUANDO la aplicación se ejecuta
+  en Android 12 o posterior, EL SISTEMA muestra una indicación general de que
+  «Alarmas y recordatorios» puede ser necesario para reducir retrasos, sin
+  afirmar que el acceso esté concedido o denegado. EL SISTEMA no persiste por
+  separado la elección «Iniciar sin avisos». Origen: HU-004, escenario
+  «Permiso de notificaciones»; decisiones D-002, D-006 y D-009.
+- **RF-7:** SI EL SISTEMA detecta con certeza que una restricción afecta el
+  aviso, ENTONCES informa esa limitación sin afirmar que la señal bloqueada se
+  emitió o mostró; SI no puede detectarla con certeza, no la informa ni
+  promete la emisión. CUANDO el estudiante vuelve tras un aviso no mostrado,
+  EL SISTEMA presenta el estado de fase derivado del tiempo persistido. Origen:
+  HU-004, escenario «Aviso con el celular en silencio»; decisiones D-001 y
+  D-002.
+- **RF-8:** CUANDO una fase termina con la aplicación en primer plano o el
+  estudiante toca el cuerpo de su notificación, EL SISTEMA muestra una pantalla
+  de alarma con «¡Tiempo terminado!», el nombre de la fase terminada y un botón
+  grande «Detener» en la parte inferior. Origen: adición aprobada del cliente.
+- **RF-9:** MIENTRAS la pantalla de alarma está visible, EL SISTEMA reproduce
+  audio en bucle, repite la vibración y mantiene encendida la pantalla. CUANDO
+  la pantalla se cierra o desmonta, EL SISTEMA detiene el audio y la vibración.
+  Origen: adición aprobada del cliente.
+- **RF-10:** CUANDO el estudiante pulsa «Detener» en la pantalla de alarma, EL
+  SISTEMA detiene el audio y la vibración, cierra esa pantalla y muestra la
+  siguiente fase conforme a la transición y al estado persistido existentes.
+  Origen: adición aprobada del cliente.
 
 ## Requisitos no funcionales
 
-- El aviso debe funcionar localmente, sin conexión a internet ni backend.
-- La experiencia de notificación debe respetar permisos y restricciones del sistema operativo.
-- La alarma y la vibración deben ser una señal de finalización de fase, no una garantía de interrupción forzada de silencio o No molestar.
-- Los mensajes visibles del sistema deben presentarse en español y aclarar si el aviso quedó limitado por el dispositivo.
-- La verificación final requiere pruebas de UI manuales en Expo Go o Android, además de pruebas automatizadas de la lógica del temporizador y las decisiones relacionadas.
+- El comportamiento funciona localmente y sin conexión.
+- La notificación con la aplicación cerrada o bloqueada es únicamente una
+  solicitud de entrega única. No se promete audio/vibración continuos ni
+  apertura automática de una interfaz a pantalla completa.
+- La alarma continua, vibración repetitiva y pantalla activa se limitan a la
+  pantalla de alarma en primer plano. Mantener la pantalla activa no impide que
+  el estudiante la bloquee manualmente ni mantiene la alarma si el proceso
+  termina.
+- Se usarán `expo-audio` para reproducir en bucle, `expo-keep-awake` para
+  mantener activa la pantalla y la API `Vibration` de React Native para la
+  vibración repetitiva. El cliente aprobó instalar las dependencias mediante
+  `npx expo install`.
+- El sonido de la alarma en primer plano será un archivo breve, original y sin
+  copyright bajo `assets/`, aprobado por el cliente; no reemplaza el sonido del
+  canal de notificación.
+- Audio, vibración, visibilidad en pantalla de bloqueo y puntualidad dependen
+  de permisos, configuración del canal, sistema operativo y dispositivo. No se
+  promete eludir silencio, No molestar o restricciones del fabricante.
+- El tiempo persistido, no la hora de entrega de la notificación, determina la
+  fase vigente.
+- La aplicación informa solo las limitaciones que puede detectar con certeza,
+  conforme a D-002.
 
 ## Casos límite
 
-- El dispositivo tiene sonido activo y la notificación llega con audio y vibración.
-- El dispositivo está en silencio o vibración y la alarma/pantalla de bloqueo puede producir una señal, pero el sistema operativo puede limitarla.
-- El estudiante deniega el permiso de notificaciones; el temporizador continúa y el aviso queda limitado.
-- La notificación se activa con la app cerrada, bloqueada o en segundo plano; la aplicación no debe requerir que el usuario la tenga abierta para mostrar el aviso.
-- El sistema operativo impide la reproducción de alarma o vibración; la app debe informar la limitación y no presentar un resultado imposible como verificado.
+- Android puede retrasar una notificación; al volver, la fase se reconcilia con
+  el tiempo persistido.
+- La notificación no se muestra o el permiso está denegado: se conserva el
+  temporizador y el estado se comunica conforme a RF-6/RF-7.
+- Una notificación visible con la aplicación cerrada o el teléfono bloqueado
+  solo puede solicitar una entrega; no inicia por sí sola el bucle ni una
+  pantalla propia. Si el estudiante toca su cuerpo y abre la aplicación, se
+  muestra la pantalla de alarma en primer plano.
+- La acción «Detener» de la notificación sigue mostrando la siguiente fase; no
+  equivale a tocar el cuerpo de la notificación.
+- Si la pantalla de alarma se cierra o desmonta, cesan sus señales continuas.
+- El sonido predeterminado de la notificación puede variar por dispositivo; no
+  se promete una duración mínima.
 
 ## Fuera de alcance
 
-- Garantizar que una alarma siempre interrumpa silencio, No molestar o restricciones del fabricante.
+- Garantizar que una señal interrumpa silencio, No molestar o restricciones del
+  fabricante.
+- Mantener la alarma en bucle tras cerrar la aplicación, iniciar un servicio
+  nativo en primer plano o abrir automáticamente una interfaz a pantalla
+  completa desde el bloqueo. Esas capacidades requieren mecanismos nativos
+  adicionales y no se prometen.
 - Sincronización remota, cuentas, analítica o servicios externos.
-- La lógica de alternancia de fases y el conteo del temporizador, que pertenecen a HU-001 y HU-002.
-- La persistencia y restauración del estado con la app cerrada, definida en HU-003.
+- Lógica de transición de fases y persistencia de sesión, cubiertas por
+  HU-001/HU-002 y HU-003.
 
 ## Criterios de finalización
 
-- RF-1 a RF-6 se verifican con pruebas automatizadas y revisión manual del flujo en Android o Expo Go.
-- La notificación con sonido y vibración se comprueba en un dispositivo con sonido activo.
-- La alarma y la vibración en silencio se comprueban con limitaciones del sistema operativo y se documenta cualquier bloqueo del fabricante.
-- El flujo de permiso se valida con el primer uso de la app y la respuesta a denegar permisos.
-- RF-7 requiere evidencia explícita del propio dispositivo: se registra si el sistema no ejecuta el aviso audible o vibratorio en silencio o No molestar.
-
-## Dudas abiertas
-
-- Ninguna. Conforme a `decisiones.md`, la aplicación respeta los permisos y
-  restricciones del sistema operativo y no garantiza sonido o vibración en
-  silencio o No molestar. El resultado depende del dispositivo.
+- Jest comprueba programación/cancelación, permisos y respuestas diferenciadas
+  de notificación, además de la pantalla de alarma y la limpieza de audio,
+  vibración y pantalla activa.
+- En dispositivo Android se valida la experiencia de alarma en primer plano,
+  el toque del cuerpo frente a la acción «Detener», permisos, canal y una sola
+  entrega con la aplicación cerrada/bloqueada. Se registran los resultados
+  reales sin convertirlos en garantías de plataforma.
+- Se comprueba que al detener la alarma se muestra la siguiente fase y que el
+  estado continúa reconciliándose desde el tiempo persistido.
+- No se afirma que la notificación mantenga señales continuas o abra la
+  pantalla automáticamente con la aplicación cerrada/bloqueada.

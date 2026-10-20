@@ -3,9 +3,12 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type PropsWithChildren,
 } from "react";
+import type { NotificationResponse } from "expo-notifications";
+import { useRouter } from "expo-router";
 import { AppState } from "react-native";
 
 import {
@@ -18,11 +21,14 @@ import {
   resumePomodoroSession,
   startPomodoroSession,
   updateReadyPhaseDuration,
+  type PomodoroPhase,
   type PomodoroSession,
 } from "../domain/pomodoro-session";
 import {
   addStudyNotificationResponseListener,
   cancelStudyEndNotification,
+  clearLastStudyNotificationResponse,
+  getLastStudyNotificationResponse,
   getStudyNotificationPermission,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
@@ -53,6 +59,31 @@ export type PomodoroSessionContextValue = {
 const PomodoroSessionContext =
   createContext<PomodoroSessionContextValue | null>(null);
 
+const DEFAULT_NOTIFICATION_ACTION_IDENTIFIER =
+  "expo.modules.notifications.actions.DEFAULT";
+
+function getResponsePhase(response: NotificationResponse): PomodoroPhase | null {
+  const phase: unknown =
+    response.notification.request.content.data?.phase;
+  if (
+    phase === "study" ||
+    phase === "shortBreak" ||
+    phase === "longBreak"
+  ) {
+    return phase;
+  }
+
+  return null;
+}
+
+function getResponseKey(response: NotificationResponse): string {
+  return [
+    response.notification.request.identifier,
+    response.actionIdentifier,
+    response.notification.date,
+  ].join(":");
+}
+
 function toError(error: unknown): Error {
   if (error instanceof Error) {
     return error;
@@ -68,6 +99,7 @@ function toError(error: unknown): Error {
 export function PomodoroSessionProvider({
   children,
 }: PropsWithChildren) {
+  const router = useRouter();
   const {
     settings,
     status: settingsStatus,
@@ -82,12 +114,17 @@ export function PomodoroSessionProvider({
   );
   const [notificationPermissionGranted, setNotificationPermissionGranted] =
     useState<boolean | null>(null);
+  const handledNotificationResponsesRef = useRef(new Set<string>());
+  const pendingNotificationResponseRef =
+    useRef<NotificationResponse | null>(null);
+  const initialNotificationResponseCheckedRef = useRef(false);
 
   const persistSession = useCallback(
     async (
       nextSession: PomodoroSession,
       previousSession: PomodoroSession | null,
       notificationsEnabled = notificationPermissionGranted,
+      openAlarmOnCompletion = false,
     ) => {
       setError(null);
 
@@ -134,6 +171,15 @@ export function PomodoroSessionProvider({
       setError(null);
 
       if (phaseCompleted) {
+        if (
+          openAlarmOnCompletion &&
+          previousSession !== null
+        ) {
+          router.push({
+            pathname: "/alarm",
+            params: { phase: previousSession.phase },
+          });
+        }
         return true;
       }
 
@@ -155,7 +201,7 @@ export function PomodoroSessionProvider({
 
       return true;
     },
-    [notificationPermissionGranted],
+    [notificationPermissionGranted, router],
   );
 
   useEffect(() => {
@@ -262,6 +308,44 @@ export function PomodoroSessionProvider({
     }
   }, []);
 
+  const processNotificationResponse = useCallback(
+    async (response: NotificationResponse) => {
+      if (status !== "ready" || session === null) {
+        pendingNotificationResponseRef.current = response;
+        return;
+      }
+
+      const responseKey = getResponseKey(response);
+      if (handledNotificationResponsesRef.current.has(responseKey)) {
+        return;
+      }
+      handledNotificationResponsesRef.current.add(responseKey);
+
+      const now = Date.now();
+      setNowMs(now);
+      if (session.status === "running") {
+        const reconciledSession = advancePomodoroSession(
+          session,
+          now,
+          settings,
+        );
+        if (reconciledSession !== session) {
+          await persistSession(reconciledSession, session);
+        }
+      }
+
+      if (response.actionIdentifier === DEFAULT_NOTIFICATION_ACTION_IDENTIFIER) {
+        const phase = getResponsePhase(response);
+        if (phase !== null) {
+          router.push({ pathname: "/alarm", params: { phase } });
+        }
+      } else if (response.actionIdentifier === "stop") {
+        router.replace("/");
+      }
+    },
+    [persistSession, router, session, settings, status],
+  );
+
   const start = useCallback(async (notificationsEnabled?: boolean) => {
     if (session?.status !== "ready") {
       return;
@@ -287,6 +371,49 @@ export function PomodoroSessionProvider({
       notificationsEnabled ?? notificationPermissionGranted ?? false,
     );
   }, [notificationPermissionGranted, persistSession, session, settings]);
+
+  useEffect(() => {
+    const pendingResponse = pendingNotificationResponseRef.current;
+    if (status !== "ready" || session === null || pendingResponse === null) {
+      return;
+    }
+
+    pendingNotificationResponseRef.current = null;
+    void processNotificationResponse(pendingResponse).catch(
+      (responseError: unknown) => setNotificationError(toError(responseError)),
+    );
+  }, [processNotificationResponse, session, status]);
+
+  useEffect(() => {
+    if (status !== "ready" || session === null) {
+      return;
+    }
+    if (initialNotificationResponseCheckedRef.current) {
+      return;
+    }
+    initialNotificationResponseCheckedRef.current = true;
+
+    let isMounted = true;
+    void (async () => {
+      try {
+        const response = await getLastStudyNotificationResponse();
+        if (!isMounted || response === null) {
+          return;
+        }
+
+        await processNotificationResponse(response);
+        await clearLastStudyNotificationResponse();
+      } catch (responseError: unknown) {
+        if (isMounted) {
+          setNotificationError(toError(responseError));
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [processNotificationResponse, session, status]);
 
   const pause = useCallback(async () => {
     if (session?.status !== "running") {
@@ -352,7 +479,12 @@ export function PomodoroSessionProvider({
       const nextSession = advancePomodoroSession(session, now, settings);
 
       if (nextSession !== session) {
-        void persistSession(nextSession, session);
+        void persistSession(
+          nextSession,
+          session,
+          undefined,
+          AppState.currentState === "active",
+        );
       } else {
         setNowMs(now);
       }
@@ -369,7 +501,24 @@ export function PomodoroSessionProvider({
         if (session?.status === "running") {
           const nextSession = advancePomodoroSession(session, now, settings);
           if (nextSession !== session) {
-            void persistSession(nextSession, session);
+            void persistSession(nextSession, session, undefined, true);
+          } else {
+            void (async () => {
+              const permissionGranted =
+                await getStudyNotificationPermission();
+              setNotificationPermissionGranted(permissionGranted);
+              if (permissionGranted) {
+                await scheduleStudyEndNotification(
+                  session.phase,
+                  session.endsAt,
+                );
+                setNotificationError(null);
+              } else {
+                await cancelStudyEndNotification();
+              }
+            })().catch((notificationFailure: unknown) => {
+              setNotificationError(toError(notificationFailure));
+            });
           }
         }
       }
@@ -383,22 +532,23 @@ export function PomodoroSessionProvider({
   useEffect(() => {
     const unsubscribe =
       typeof addStudyNotificationResponseListener === "function"
-        ? addStudyNotificationResponseListener(() => {
-            const now = Date.now();
-            setNowMs(now);
-            if (session?.status === "running") {
-              const nextSession = advancePomodoroSession(session, now, settings);
-              if (nextSession !== session) {
-                void persistSession(nextSession, session);
-              }
-            }
-          })
+        ? addStudyNotificationResponseListener(
+            (response) => {
+              void processNotificationResponse(response).catch(
+                (responseError: unknown) =>
+                  setNotificationError(toError(responseError)),
+              );
+            },
+            (listenerError) => {
+              setNotificationError(toError(listenerError));
+            },
+          )
         : null;
 
     return () => {
       unsubscribe?.();
     };
-  }, [persistSession, session, settings]);
+  }, [processNotificationResponse]);
 
   const remainingMs =
     session === null ? 0 : getPomodoroRemainingTime(session, nowMs);

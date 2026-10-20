@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
+import { NativeModules, Platform } from "react-native";
 
 import type { PomodoroPhase } from "../domain/pomodoro-session";
 
@@ -9,10 +9,42 @@ type NotificationPermissionsStatus =
   import("expo-notifications").NotificationPermissionsStatus;
 
 const STUDY_END_NOTIFICATION_ID_KEY = "@cotopaxi/study-end-notification-id";
-const STUDY_NOTIFICATION_CHANNEL_ID = "default";
+const STUDY_NOTIFICATION_CHANNEL_ID = "studyend8";
+const LEGACY_STUDY_NOTIFICATION_CHANNEL_IDS = [
+  "default",
+  "studyend",
+  "studyend2",
+  "studyend3",
+  "studyend4",
+  "studyend5",
+  "studyend6",
+  "studyend7",
+];
+const STUDY_NOTIFICATION_CATEGORY_ID = "studyend";
+const STUDY_NOTIFICATION_STOP_ACTION_ID = "stop";
 const STUDY_NOTIFICATION_VIBRATION_PATTERN = [0, 250, 250, 250];
 let notificationsModulePromise: Promise<NotificationsModule | null> | null =
   null;
+
+type NotificationResponse = import("expo-notifications").NotificationResponse;
+type NativeAlarmChannelModule = {
+  configure: (
+    channelId: string,
+    legacyChannelIds: string[],
+    vibrationPattern: number[],
+  ) => Promise<void>;
+};
+
+function isNativeAlarmChannelModule(
+  value: unknown,
+): value is NativeAlarmChannelModule {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "configure" in value &&
+    typeof value.configure === "function"
+  );
+}
 
 const phaseMessages: Record<PomodoroPhase, { title: string; body: string }> = {
   study: {
@@ -44,7 +76,6 @@ function loadNotificationsModule(): Promise<NotificationsModule | null> {
           shouldShowList: true,
           shouldPlaySound: true,
           shouldSetBadge: false,
-          shouldVibrate: true,
           priority: notifications.AndroidNotificationPriority.MAX,
         }),
       });
@@ -61,22 +92,45 @@ function loadNotificationsModule(): Promise<NotificationsModule | null> {
   return notificationsModulePromise;
 }
 
-async function configureAndroidChannel(
-  notifications: NotificationsModule,
-): Promise<void> {
+async function configureAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") {
     return;
   }
 
-  await notifications.setNotificationChannelAsync(
+  const nativeModule: unknown = NativeModules.StudyAlarmChannel;
+  if (!isNativeAlarmChannelModule(nativeModule)) {
+    throw new Error(
+      "No se pudo configurar el canal de alarma. Instala la versión Android completa de la aplicación.",
+    );
+  }
+
+  await nativeModule.configure(
     STUDY_NOTIFICATION_CHANNEL_ID,
-    {
-      name: "Pomodoro Notifications",
-      importance: notifications.AndroidImportance.HIGH,
-      vibrationPattern: STUDY_NOTIFICATION_VIBRATION_PATTERN,
-      sound: "default",
-    },
+    LEGACY_STUDY_NOTIFICATION_CHANNEL_IDS,
+    STUDY_NOTIFICATION_VIBRATION_PATTERN,
   );
+}
+
+async function configureStudyNotificationCategory(
+  notifications: NotificationsModule,
+): Promise<void> {
+  await notifications.setNotificationCategoryAsync(
+    STUDY_NOTIFICATION_CATEGORY_ID,
+    [
+      {
+        identifier: STUDY_NOTIFICATION_STOP_ACTION_ID,
+        buttonTitle: "Detener",
+        options: { opensAppToForeground: true },
+      },
+    ],
+  );
+}
+
+async function configureNotificationPresentation(
+  notifications: NotificationsModule,
+): Promise<void> {
+  await configureAndroidChannel();
+  await configureStudyNotificationCategory(notifications);
 }
 
 export async function configureStudyNotifications(): Promise<void> {
@@ -85,7 +139,7 @@ export async function configureStudyNotifications(): Promise<void> {
     return;
   }
 
-  await configureAndroidChannel(notifications);
+  await configureNotificationPresentation(notifications);
 }
 
 function hasNotificationPermission(
@@ -100,7 +154,7 @@ export async function getStudyNotificationPermission(): Promise<boolean> {
     return false;
   }
 
-  await configureAndroidChannel(notifications);
+  await configureNotificationPresentation(notifications);
   const permissions = await notifications.getPermissionsAsync();
   return hasNotificationPermission(permissions);
 }
@@ -111,7 +165,7 @@ export async function requestStudyNotificationPermission(): Promise<boolean> {
     return false;
   }
 
-  await configureAndroidChannel(notifications);
+  await configureNotificationPresentation(notifications);
   const currentPermissions = await notifications.getPermissionsAsync();
 
   if (hasNotificationPermission(currentPermissions)) {
@@ -144,6 +198,26 @@ export async function cancelStudyEndNotification(): Promise<void> {
   await AsyncStorage.removeItem(STUDY_END_NOTIFICATION_ID_KEY);
 }
 
+export async function getLastStudyNotificationResponse(): Promise<
+  NotificationResponse | null
+> {
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return null;
+  }
+
+  return notifications.getLastNotificationResponse();
+}
+
+export async function clearLastStudyNotificationResponse(): Promise<void> {
+  const notifications = await loadNotificationsModule();
+  if (notifications === null) {
+    return;
+  }
+
+  notifications.clearLastNotificationResponse();
+}
+
 export async function scheduleStudyEndNotification(
   phase: PomodoroPhase,
   endsAt: number,
@@ -159,7 +233,7 @@ export async function scheduleStudyEndNotification(
     return;
   }
 
-  await configureAndroidChannel(notifications);
+  await configureNotificationPresentation(notifications);
   await notifications.cancelAllScheduledNotificationsAsync();
   const message = phaseMessages[phase];
   const notificationId = await notifications.scheduleNotificationAsync({
@@ -168,8 +242,13 @@ export async function scheduleStudyEndNotification(
       body: message.body,
       data: { phase },
       sound: "default",
-      vibrate: STUDY_NOTIFICATION_VIBRATION_PATTERN,
-      priority: notifications.AndroidNotificationPriority.MAX,
+      ...(Platform.OS === "android"
+        ? {
+            vibrate: STUDY_NOTIFICATION_VIBRATION_PATTERN,
+            priority: notifications.AndroidNotificationPriority.MAX,
+          }
+        : {}),
+      categoryIdentifier: STUDY_NOTIFICATION_CATEGORY_ID,
     },
     trigger: {
       type: notifications.SchedulableTriggerInputTypes.DATE,
@@ -197,7 +276,7 @@ export async function notifyStudyPhaseCompleted(): Promise<void> {
     return;
   }
 
-  await configureAndroidChannel(notifications);
+  await configureAndroidChannel();
   await notifications.cancelAllScheduledNotificationsAsync();
   await notifications.scheduleNotificationAsync({
     content: {
@@ -212,7 +291,8 @@ export async function notifyStudyPhaseCompleted(): Promise<void> {
 }
 
 export function addStudyNotificationResponseListener(
-  onResponse?: () => void,
+  onResponse: (response: NotificationResponse) => void,
+  onError: (error: Error) => void,
 ): (() => void) | null {
   if (Constants.appOwnership === "expo") {
     return null;
@@ -220,27 +300,42 @@ export function addStudyNotificationResponseListener(
 
   try {
     const notifications: NotificationsModule = require("expo-notifications");
-    const addListener = notifications.addNotificationResponseReceivedListener;
-    if (typeof addListener !== "function") {
-      return null;
-    }
+    const subscription = notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        try {
+          onResponse(response);
+        } catch (error: unknown) {
+          onError(
+            error instanceof Error
+              ? error
+              : new Error("No se pudo procesar la respuesta al aviso."),
+          );
+        }
 
-    const subscription = addListener(() => {
-      onResponse?.();
-      void notifications.dismissAllNotificationsAsync?.().catch(() => {});
+        void notifications
+          .dismissNotificationAsync(
+            response.notification.request.identifier,
+          )
+          .catch((error: unknown) => {
+            onError(
+              error instanceof Error
+                ? error
+                : new Error("No se pudo descartar el aviso."),
+            );
+          });
     });
     if (!subscription || typeof subscription.remove !== "function") {
-      return null;
+      throw new Error("No se pudo registrar la respuesta a notificaciones.");
     }
 
     return () => {
-      try {
-        subscription.remove();
-      } catch {
-        // El ciclo de vida de la app no debe depender del listener nativo.
-      }
+      subscription.remove();
     };
-  } catch {
+  } catch (error: unknown) {
+    const detail = error instanceof Error ? ` (${error.message})` : "";
+    onError(
+      new Error(`No se pudieron escuchar las respuestas al aviso.${detail}`),
+    );
     return null;
   }
 }

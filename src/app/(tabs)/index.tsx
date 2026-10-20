@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,29 +29,8 @@ const phaseNames: Record<PomodoroPhase, string> = {
 
 export default function HomeScreen() {
   const timer = usePomodoroSession();
-  const previousSessionRef = useRef(timer.session);
   const [hasExplainedNotificationPermission, setHasExplainedNotificationPermission] =
     useState(false);
-
-  useEffect(() => {
-    const previousSession = previousSessionRef.current;
-    const currentSession = timer.session;
-
-    if (
-      previousSession?.status === 'running' &&
-      currentSession?.status === 'ready' &&
-      currentSession.lastCompletedPhase === previousSession.phase
-    ) {
-      const completedPeriod =
-        previousSession.phase === 'study' ? 'estudio' : 'descanso';
-      Alert.alert(
-        '¡Tiempo finalizado!',
-        `El período de ${completedPeriod} ha concluido. Presiona Iniciar para el siguiente ciclo.`,
-      );
-    }
-
-    previousSessionRef.current = currentSession;
-  }, [timer.session]);
 
   if (timer.status === 'loading') {
     return <StatusMessage message="Cargando tu sesión…" />;
@@ -77,6 +56,8 @@ export default function HomeScreen() {
         : `${phaseNames[session.phase]} pausado`;
 
   const isBreak = session.phase === 'shortBreak' || session.phase === 'longBreak';
+  const shouldShowExactAlarmNotice =
+    Platform.OS === 'android' && Number(Platform.Version) >= 31;
   const progressRatio =
     session.initialDurationMs > 0
       ? Math.min(1, Math.max(0, 1 - timer.remainingMs / session.initialDurationMs))
@@ -223,6 +204,16 @@ export default function HomeScreen() {
               <View style={styles.noticeBox}>
                 <Text style={styles.permissionMessage}>
                   Avisos desactivados. La cuenta continuará sin notificaciones.
+                </Text>
+              </View>
+            ) : null}
+            {shouldShowExactAlarmNotice ? (
+              <View style={styles.noticeBox}>
+                <Text style={styles.permissionMessage}>
+                  En Android 12 o posterior, el acceso especial «Alarmas y
+                  recordatorios» puede reducir retrasos. Se activa en Ajustes
+                  del sistema; la aplicación no puede comprobar si está
+                  concedido.
                 </Text>
               </View>
             ) : null}

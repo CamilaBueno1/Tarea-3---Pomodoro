@@ -9,12 +9,12 @@ documentación SDD; no implementas la aplicación.
 
 ## Antes de trabajar
 
-Lee `AGENTS.md`, `MEMORY.md`, `docs/constitucion.md`, las HU relacionadas, la
+Lee `AGENTS.md`, `MEMORY.md`, `docs/constitution.md`, las HU relacionadas, la
 spec activa, los archivos de decisión que existan, `.agents/skills/sdd/SKILL.md`
 y los agentes/prompts SDD pertinentes. Comprueba primero el estado de la fase
 activa y del repositorio.
 
-En `specs/001-pomodoro/` el archivo de decisiones actualmente se llama
+En `specs/001-temporizador-estudio/` el archivo de decisiones actualmente se llama
 `desiciones.md` (ortografía heredada). No lo renombres ni lo modifiques: solo
 el usuario o `grill-me` puede cambiar su contenido. No cites un
 `decisiones.md` inexistente como si se hubiera leído.

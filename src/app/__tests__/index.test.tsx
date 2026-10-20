@@ -1,6 +1,6 @@
 import { act,
 fireEvent, render, screen } from "@testing-library/react-native";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 
 import type { PomodoroSession } from "../../domain/pomodoro-session";
 import { usePomodoroSession } from "../../hooks/use-pomodoro-session";
@@ -143,7 +143,7 @@ describe("Pomodoro home screen", () => {
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
-  it("alerts when a running phase finishes and asks the user to start the next cycle", async () => {
+  it("does not show a second completion alert after the session advances", async () => {
     setTimerState("running", 1_000, "00:01");
     const { rerender } = await render(<HomeScreen />);
 
@@ -172,14 +172,8 @@ describe("Pomodoro home screen", () => {
 
     await rerender(<HomeScreen />);
 
-    expect(alertSpy).toHaveBeenCalledTimes(1);
-    expect(alertSpy).toHaveBeenCalledWith(
-      "¡Tiempo finalizado!",
-      "El período de estudio ha concluido. Presiona Iniciar para el siguiente ciclo.",
-    );
-
-    await rerender(<HomeScreen />);
-    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId("phase-completion-notice")).toBeTruthy();
   });
 
   it("starts the timer directly when notifications are granted", async () => {
@@ -189,6 +183,64 @@ describe("Pomodoro home screen", () => {
     );
 
     expect(mockStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the notification-disabled state from the permission status", async () => {
+    setTimerState("ready", 25 * 60 * 1_000, "25:00", false);
+    await render(<HomeScreen />);
+
+    expect(
+      screen.getByText(
+        "Avisos desactivados. La cuenta continuará sin notificaciones.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("does not claim notifications are disabled before permission is checked", async () => {
+    setTimerState("ready", 25 * 60 * 1_000, "25:00", null);
+    await render(<HomeScreen />);
+
+    expect(screen.queryByText(/Avisos desactivados/)).toBeNull();
+  });
+
+  it("shows the general exact-alarm access notice on Android 12 and later", async () => {
+    const originalPlatform = Platform.OS;
+    const versionSpy = jest
+      .spyOn(Platform, "Version", "get")
+      .mockReturnValue(31);
+    Platform.OS = "android";
+
+    try {
+      await render(<HomeScreen />);
+
+      expect(
+        screen.getByText(
+          "En Android 12 o posterior, el acceso especial «Alarmas y recordatorios» puede reducir retrasos. Se activa en Ajustes del sistema; la aplicación no puede comprobar si está concedido.",
+        ),
+      ).toBeTruthy();
+    } finally {
+      Platform.OS = originalPlatform;
+      versionSpy.mockRestore();
+    }
+  });
+
+  it("does not show the exact-alarm access notice before Android 12", async () => {
+    const originalPlatform = Platform.OS;
+    const versionSpy = jest
+      .spyOn(Platform, "Version", "get")
+      .mockReturnValue(30);
+    Platform.OS = "android";
+
+    try {
+      await render(<HomeScreen />);
+
+      expect(
+        screen.queryByText(/Alarmas y recordatorios/),
+      ).toBeNull();
+    } finally {
+      Platform.OS = originalPlatform;
+      versionSpy.mockRestore();
+    }
   });
 
   it("explains local notifications and allows starting without permission", async () => {

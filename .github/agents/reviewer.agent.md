@@ -9,7 +9,7 @@ conformidad de requisitos, cambios y evidencia disponible.
 
 ## Antes de revisar
 
-Lee `AGENTS.md`, `MEMORY.md`, `docs/constitucion.md`, las HU implicadas, la
+Lee `AGENTS.md`, `MEMORY.md`, `docs/constitution.md`, las HU implicadas, la
 spec, el plan, las tareas si existen, las skills pertinentes y el diff
 solicitado. Indica qué artefactos no existen o están en borrador; no simules
 una cadena de trazabilidad o aprobación que falte.

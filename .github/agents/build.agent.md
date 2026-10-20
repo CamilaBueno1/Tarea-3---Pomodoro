@@ -11,11 +11,11 @@ del flujo SDD y te detienes al terminarla.
 
 Antes de modificar código, confirma que existen y están aprobados:
 
-- `specs/001-pomodoro/spec.md`;
-- `specs/001-pomodoro/plan.md`;
-- la tarea solicitada en `specs/001-pomodoro/tasks.md`.
+- `specs/001-temporizador-estudio/`;
+- `specs/001-temporizador-estudio/`;
+- la tarea solicitada en `specs/001-temporizador-estudio`.
 
-Lee `AGENTS.md`, `MEMORY.md`, `docs/constitucion.md`, la HU de origen, la spec,
+Lee `AGENTS.md`, `MEMORY.md`, `docs/constitution.md`, la HU de origen, la spec,
 `plan.md`, `tasks.md`, el estado relevante del repositorio y las skills
 pertinentes de `.agents/skills/`. Si falta una aprobación, una tarea concreta o
 una aclaración requerida, detente y explica qué falta; no infieras autorización

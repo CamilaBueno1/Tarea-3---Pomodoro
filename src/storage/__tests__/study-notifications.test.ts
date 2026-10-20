@@ -2,13 +2,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { PermissionStatus } from "expo-modules-core";
-import { Platform } from "react-native";
+import { NativeModules, Platform } from "react-native";
+
+import appConfig from "../../../app.json";
 
 import {
   cancelStudyEndNotification,
   addStudyNotificationResponseListener,
   configureStudyNotifications,
   getStudyNotificationPermission,
+  getLastStudyNotificationResponse,
+  clearLastStudyNotificationResponse,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
   notifyStudyPhaseCompleted,
@@ -30,18 +34,20 @@ jest.mock("expo-constants", () => ({
 
 jest.mock("expo-notifications", () => ({
   __esModule: true,
-  AndroidImportance: { DEFAULT: 3, HIGH: 4 },
   AndroidNotificationPriority: { MAX: "max" },
   SchedulableTriggerInputTypes: { DATE: "date" },
+  DEFAULT_ACTION_IDENTIFIER: "expo.modules.notifications.actions.DEFAULT",
   setNotificationHandler: jest.fn(),
-  setNotificationChannelAsync: jest.fn(),
+  setNotificationCategoryAsync: jest.fn().mockResolvedValue(undefined),
   cancelAllScheduledNotificationsAsync: jest.fn(),
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   cancelScheduledNotificationAsync: jest.fn(),
   addNotificationResponseReceivedListener: jest.fn(),
-  dismissAllNotificationsAsync: jest.fn().mockResolvedValue(undefined),
+  getLastNotificationResponse: jest.fn(),
+  clearLastNotificationResponse: jest.fn(),
+  dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockGetItem = jest.mocked(AsyncStorage.getItem);
@@ -57,8 +63,9 @@ const mockScheduleNotification = jest.mocked(
 const mockSetNotificationHandler = jest.mocked(
   Notifications.setNotificationHandler,
 );
-const mockSetNotificationChannel = jest.mocked(
-  Notifications.setNotificationChannelAsync,
+const mockConfigureNativeAlarmChannel = jest.fn();
+const mockSetNotificationCategory = jest.mocked(
+  Notifications.setNotificationCategoryAsync,
 );
 const mockCancelNotification = jest.mocked(
   Notifications.cancelScheduledNotificationAsync,
@@ -69,10 +76,23 @@ const mockCancelAllScheduledNotifications = jest.mocked(
 const mockAddNotificationListener = jest.mocked(
   Notifications.addNotificationResponseReceivedListener,
 );
+const mockGetLastNotificationResponse = jest.mocked(
+  Notifications.getLastNotificationResponse,
+);
+const mockClearLastNotificationResponse = jest.mocked(
+  Notifications.clearLastNotificationResponse,
+);
+const mockDismissNotification = jest.mocked(
+  Notifications.dismissNotificationAsync,
+);
 
 describe("study end notifications", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    NativeModules.StudyAlarmChannel = {
+      configure: mockConfigureNativeAlarmChannel,
+    };
+    mockConfigureNativeAlarmChannel.mockResolvedValue(undefined);
     mockGetItem.mockResolvedValue(null);
     mockSetItem.mockResolvedValue(undefined);
     mockRemoveItem.mockResolvedValue(undefined);
@@ -90,6 +110,8 @@ describe("study end notifications", () => {
     });
     mockScheduleNotification.mockResolvedValue("notification-id");
     mockCancelAllScheduledNotifications.mockResolvedValue(undefined);
+    mockGetLastNotificationResponse.mockReturnValue(null);
+    mockClearLastNotificationResponse.mockImplementation(() => undefined);
   });
 
   it("requests permission when it has not already been granted", async () => {
@@ -149,22 +171,109 @@ describe("study end notifications", () => {
     expect(mockRequestPermissions).not.toHaveBeenCalled();
   });
 
-  it("configures the default high-importance Android notification channel", async () => {
+  it("creates the Android channel before requesting notification permission", async () => {
+    const originalPlatform = Platform.OS;
+    Platform.OS = "android";
+    mockGetPermissions.mockResolvedValue({
+      granted: false,
+      canAskAgain: true,
+      expires: "never",
+      status: PermissionStatus.UNDETERMINED,
+    });
+
+    try {
+      await expect(requestStudyNotificationPermission()).resolves.toBe(true);
+
+      expect(mockConfigureNativeAlarmChannel.mock.invocationCallOrder[0]).toBeLessThan(
+        mockRequestPermissions.mock.invocationCallOrder[0],
+      );
+    } finally {
+      Platform.OS = originalPlatform;
+    }
+  });
+
+  it("configures the native alarm channel before permission is requested", async () => {
     const originalPlatform = Platform.OS;
     Platform.OS = "android";
 
     try {
       await configureStudyNotifications();
 
-      expect(mockSetNotificationChannel).toHaveBeenCalledWith("default", {
-        name: "Pomodoro Notifications",
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        sound: "default",
-      });
+      expect(mockConfigureNativeAlarmChannel).toHaveBeenCalledWith(
+        "studyend8",
+        [
+          "default",
+          "studyend",
+          "studyend2",
+          "studyend3",
+          "studyend4",
+          "studyend5",
+          "studyend6",
+          "studyend7",
+        ],
+        [0, 250, 250, 250],
+      );
     } finally {
       Platform.OS = originalPlatform;
     }
+  });
+
+  it("declares the Android exact-alarm access without USE_EXACT_ALARM", () => {
+    const androidConfig = appConfig.expo.android as {
+      permissions?: string[];
+    };
+    const permissions = androidConfig.permissions;
+
+    expect(permissions).toEqual(
+      expect.arrayContaining(["android.permission.SCHEDULE_EXACT_ALARM"]),
+    );
+    expect(permissions).not.toContain("android.permission.USE_EXACT_ALARM");
+  });
+
+  it("registers a foreground stop action for phase notifications", async () => {
+    await configureStudyNotifications();
+
+    expect(mockSetNotificationCategory).toHaveBeenCalledWith("studyend", [
+      {
+        identifier: "stop",
+        buttonTitle: "Detener",
+        options: { opensAppToForeground: true },
+      },
+    ]);
+  });
+
+  it("reads and clears the initial notification response supported by SDK 57", async () => {
+    const initialResponse = {
+      actionIdentifier: Notifications.DEFAULT_ACTION_IDENTIFIER,
+      notification: {
+        date: Date.now(),
+        request: {
+          identifier: "cold-start-notification",
+          content: {
+            title: "Tiempo de estudio terminado",
+            subtitle: null,
+            body: "Tu tiempo de estudio terminó.",
+            data: { phase: "study" },
+            categoryIdentifier: "studyend",
+            sound: "default" as const,
+            launchImageName: null,
+            badge: null,
+            attachments: [],
+            threadIdentifier: null,
+          },
+          trigger: null,
+        },
+      },
+    };
+    mockGetLastNotificationResponse.mockReturnValue(initialResponse);
+
+    await expect(getLastStudyNotificationResponse()).resolves.toEqual(
+      initialResponse,
+    );
+    await clearLastStudyNotificationResponse();
+
+    expect(mockGetLastNotificationResponse).toHaveBeenCalledTimes(1);
+    expect(mockClearLastNotificationResponse).toHaveBeenCalledTimes(1);
   });
 
   it("schedules a notification with the phase and absolute end timestamp", async () => {
@@ -186,21 +295,34 @@ describe("study end notifications", () => {
           sound: "default",
           vibrate: [0, 250, 250, 250],
           priority: Notifications.AndroidNotificationPriority.MAX,
+          categoryIdentifier: "studyend",
         },
         trigger: {
           type: "date",
           date: new Date(endsAt),
-          channelId: "default",
+          channelId: "studyend8",
         },
       });
-      expect(mockSetNotificationChannel).toHaveBeenCalledWith(
-        "default",
-        expect.objectContaining({
-          importance: 4,
-          name: "Pomodoro Notifications",
-          vibrationPattern: [0, 250, 250, 250],
-          sound: "default",
-        }),
+      expect(
+        mockConfigureNativeAlarmChannel.mock.invocationCallOrder[0],
+      ).toBeLessThan(mockScheduleNotification.mock.invocationCallOrder[0]);
+      expect(mockConfigureNativeAlarmChannel).toHaveBeenCalledWith(
+        "studyend8",
+        [
+          "default",
+          "studyend",
+          "studyend2",
+          "studyend3",
+          "studyend4",
+          "studyend5",
+          "studyend6",
+          "studyend7",
+        ],
+        [0, 250, 250, 250],
+      );
+      expect(mockSetNotificationCategory).toHaveBeenCalledWith(
+        "studyend",
+        expect.any(Array),
       );
       expect(mockSetItem).toHaveBeenCalledWith(
         expect.any(String),
@@ -263,25 +385,6 @@ describe("study end notifications", () => {
     ).rejects.toBe(scheduleError);
   });
 
-  it("reports an unavailable Expo Go native module without crashing on import", async () => {
-    jest.resetModules();
-    jest.doMock("expo-notifications", () => {
-      throw new Error("Cannot find native module 'ExpoTopicSubscriptionModule'");
-    });
-
-    const notificationAdapter: typeof import("../study-notifications") =
-      require("../study-notifications");
-
-    expect(
-      notificationAdapter.addStudyNotificationResponseListener(),
-    ).toBeNull();
-    await expect(
-      notificationAdapter.getStudyNotificationPermission(),
-    ).rejects.toThrow(
-      "Las notificaciones no están disponibles en esta versión de Expo Go.",
-    );
-  });
-
   it("treats notifications as unavailable in Expo Go", async () => {
     const ownershipDescriptor = Object.getOwnPropertyDescriptor(
       Constants,
@@ -301,7 +404,9 @@ describe("study end notifications", () => {
         scheduleStudyEndNotification("study", Date.now() + 2_000_000),
       ).resolves.toBeUndefined();
       await expect(cancelStudyEndNotification()).resolves.toBeUndefined();
-      expect(addStudyNotificationResponseListener()).toBeNull();
+      expect(
+        addStudyNotificationResponseListener(jest.fn(), jest.fn()),
+      ).toBeNull();
       expect(mockGetPermissions).not.toHaveBeenCalled();
       expect(mockRequestPermissions).not.toHaveBeenCalled();
       expect(mockScheduleNotification).not.toHaveBeenCalled();
@@ -321,23 +426,144 @@ describe("study end notifications", () => {
     }
   });
 
-  it("ignores listener registration failures when the native module is unavailable", () => {
+  it("reports listener registration failures", () => {
+    const listenerError = jest.fn();
     mockAddNotificationListener.mockImplementationOnce(() => {
       throw new Error("ExpoTopicSubscriptionModule missing");
     });
 
-    expect(addStudyNotificationResponseListener()).toBeNull();
+    expect(
+      addStudyNotificationResponseListener(jest.fn(), listenerError),
+    ).toBeNull();
+    expect(listenerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("ExpoTopicSubscriptionModule missing"),
+      }),
+    );
   });
 
-  it("does not let native listener cleanup failures escape", () => {
+  it("forwards the response and dismisses the tapped notification", () => {
+    const onResponse = jest.fn();
+    mockAddNotificationListener.mockReturnValueOnce({
+      remove: jest.fn(),
+    });
+
+    addStudyNotificationResponseListener(onResponse, jest.fn());
+    const listener = mockAddNotificationListener.mock.calls[0]?.[0];
+    if (listener === undefined) {
+      throw new Error("The notification response listener was not registered.");
+    }
+
+    listener({
+      actionIdentifier: "stop",
+      notification: {
+        date: Date.now(),
+        request: {
+          identifier: "delivered-notification",
+          content: {
+            title: "Tiempo de estudio terminado",
+            subtitle: null,
+            body: "Tu tiempo de estudio terminó.",
+            data: { phase: "study" },
+            categoryIdentifier: "studyend",
+            sound: "default",
+            launchImageName: null,
+            badge: null,
+            attachments: [],
+            threadIdentifier: null,
+          },
+          trigger: null,
+        },
+      },
+    });
+
+    expect(onResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ actionIdentifier: "stop" }),
+    );
+    expect(mockDismissNotification).toHaveBeenCalledWith(
+      "delivered-notification",
+    );
+  });
+
+  it("reports notification dismissal failures", async () => {
+    const dismissalError = new Error("dismiss failed");
+    const onError = jest.fn();
+    mockDismissNotification.mockRejectedValueOnce(dismissalError);
+    mockAddNotificationListener.mockReturnValueOnce({
+      remove: jest.fn(),
+    });
+
+    addStudyNotificationResponseListener(jest.fn(), onError);
+    const listener = mockAddNotificationListener.mock.calls[0]?.[0];
+    if (listener === undefined) {
+      throw new Error("The notification response listener was not registered.");
+    }
+    listener({
+      actionIdentifier: Notifications.DEFAULT_ACTION_IDENTIFIER,
+      notification: {
+        date: Date.now(),
+        request: {
+          identifier: "tapped-notification",
+          content: {
+            title: null,
+            subtitle: null,
+            body: null,
+            categoryIdentifier: null,
+            sound: "default",
+            launchImageName: null,
+            badge: null,
+            attachments: [],
+            threadIdentifier: null,
+          },
+          trigger: null,
+        },
+      },
+    });
+
+    await Promise.resolve();
+    expect(onError).toHaveBeenCalledWith(dismissalError);
+  });
+
+  it("surfaces native listener cleanup failures", () => {
     mockAddNotificationListener.mockReturnValueOnce({
       remove: () => {
         throw new Error("listener already removed");
       },
     });
 
-    const unsubscribe = addStudyNotificationResponseListener();
-    expect(() => unsubscribe?.()).not.toThrow();
+    const unsubscribe = addStudyNotificationResponseListener(
+      jest.fn(),
+      jest.fn(),
+    );
+    expect(() => unsubscribe?.()).toThrow("listener already removed");
+  });
+
+  it("reports an unavailable Expo Go native module without crashing on import", async () => {
+    jest.resetModules();
+    jest.doMock("expo-notifications", () => {
+      throw new Error("Cannot find native module 'ExpoTopicSubscriptionModule'");
+    });
+
+    const notificationAdapter: typeof import("../study-notifications") =
+      require("../study-notifications");
+
+    const listenerError = jest.fn();
+    expect(
+      notificationAdapter.addStudyNotificationResponseListener(
+        jest.fn(),
+        listenerError,
+      ),
+    ).toBeNull();
+    expect(listenerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("ExpoTopicSubscriptionModule"),
+      }),
+    );
+    await expect(
+      notificationAdapter.getStudyNotificationPermission(),
+    ).rejects.toThrow(
+      "Las notificaciones no están disponibles en esta versión de Expo Go.",
+    );
   });
 
   it("does not mutate a read-only Expo global while importing the adapter", () => {
