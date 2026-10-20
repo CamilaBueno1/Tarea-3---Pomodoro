@@ -21,6 +21,7 @@ import {
   type PomodoroSettingsInput,
 } from '@/domain/pomodoro-settings';
 import { CotopaxiColors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { ScreenHeader } from '@/components/screen-header';
 import { usePomodoroSettings } from '@/hooks/use-pomodoro-settings';
 
 type SettingsFieldName = keyof PomodoroSettings;
@@ -149,7 +150,6 @@ export default function SettingsScreen() {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Restablecer',
-          style: 'destructive',
           onPress: () => {
             void persistSettings({ ...DEFAULT_POMODORO_SETTINGS });
           },
@@ -199,81 +199,72 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
-            {/* Encabezado Institucional */}
-            <View style={styles.header}>
-              <View style={styles.badgeRow}>
-                <Text style={styles.eyebrow}>ACADEMIA COTOPAXI</Text>
-                <View style={styles.focusBadge}>
-                  <Text style={styles.focusBadgeText}>CONFIGURACIÓN</Text>
+            <ScreenHeader
+              title="Ajustes"
+              description="Adapta los tiempos a tu ritmo de estudio."
+              variant="plain"
+            />
+
+            <View style={styles.form}>
+              <View style={styles.sectionCard} testID="phase-settings-card">
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Duración de cada fase</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Los cambios se aplican al comenzar la siguiente fase.
+                  </Text>
                 </View>
-              </View>
-              <Text style={styles.title}>Ajustes</Text>
-              <Text style={styles.headerDescription}>
-                Adapta los tiempos a tu ritmo de estudio.
-              </Text>
-            </View>
 
-            {/* Tarjeta de Formulario Principal */}
-            <View style={styles.formCard}>
-              {/* Sección 1: Duración de cada fase */}
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Duración de cada fase</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Los cambios se aplican al comenzar la siguiente fase.
-                </Text>
-              </View>
-
-              <SettingsField
-                label="Duración de estudio en minutos"
-                value={formValues.studyDurationMinutes}
-                unit="min"
-                hint="De 1 a 120 minutos."
-                error={fieldErrors.studyDurationMinutes}
-                onChangeText={(value) =>
-                  updateField('studyDurationMinutes', value)
-                }
-              />
-              <SettingsField
-                label="Duración del descanso corto en minutos"
-                value={formValues.shortBreakDurationMinutes}
-                unit="min"
-                hint="De 1 a 120 minutos."
-                error={fieldErrors.shortBreakDurationMinutes}
-                onChangeText={(value) =>
-                  updateField('shortBreakDurationMinutes', value)
-                }
-              />
-              <SettingsField
-                label="Duración del descanso largo en minutos"
-                value={formValues.longBreakDurationMinutes}
-                unit="min"
-                hint="De 1 a 120 minutos."
-                error={fieldErrors.longBreakDurationMinutes}
-                onChangeText={(value) =>
-                  updateField('longBreakDurationMinutes', value)
-                }
-              />
-
-              <View style={styles.divider} />
-
-              {/* Sección 2: Ciclo Pomodoro */}
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Ciclo Pomodoro</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Cantidad de pomodoros de estudio antes de un descanso largo.
-                </Text>
+                <SettingsField
+                  label="Duración de estudio en minutos"
+                  value={formValues.studyDurationMinutes}
+                  unit="min"
+                  hint="De 1 a 120 minutos."
+                  error={fieldErrors.studyDurationMinutes}
+                  onChangeText={(value) =>
+                    updateField('studyDurationMinutes', value)
+                  }
+                />
+                <SettingsField
+                  label="Duración del descanso corto en minutos"
+                  value={formValues.shortBreakDurationMinutes}
+                  unit="min"
+                  hint="De 1 a 120 minutos."
+                  error={fieldErrors.shortBreakDurationMinutes}
+                  onChangeText={(value) =>
+                    updateField('shortBreakDurationMinutes', value)
+                  }
+                />
+                <SettingsField
+                  label="Duración del descanso largo en minutos"
+                  value={formValues.longBreakDurationMinutes}
+                  unit="min"
+                  hint="De 1 a 120 minutos."
+                  error={fieldErrors.longBreakDurationMinutes}
+                  onChangeText={(value) =>
+                    updateField('longBreakDurationMinutes', value)
+                  }
+                />
               </View>
 
-              <SettingsField
-                label="Pomodoros antes del descanso largo"
-                value={formValues.pomodorosBeforeLongBreak}
-                unit="pomodoros"
-                hint="De 1 a 12 pomodoros."
-                error={fieldErrors.pomodorosBeforeLongBreak}
-                onChangeText={(value) =>
-                  updateField('pomodorosBeforeLongBreak', value)
-                }
-              />
+              <View style={styles.sectionCard} testID="cycle-settings-card">
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Ciclo Pomodoro</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Cantidad de pomodoros de estudio antes de un descanso largo.
+                  </Text>
+                </View>
+
+                <SettingsField
+                  label="Pomodoros antes del descanso largo"
+                  value={formValues.pomodorosBeforeLongBreak}
+                  unit="pomodoros"
+                  hint="De 1 a 12 pomodoros."
+                  error={fieldErrors.pomodorosBeforeLongBreak}
+                  onChangeText={(value) =>
+                    updateField('pomodorosBeforeLongBreak', value)
+                  }
+                />
+              </View>
 
               {operationError ? (
                 <View style={styles.errorBox}>
@@ -404,15 +395,18 @@ function SettingsButton({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.button,
-        destructive && styles.destructiveButton,
-        pressed && !disabled && (destructive ? styles.destructiveButtonPressed : styles.buttonPressed),
+        destructive ? styles.secondaryButton : styles.button,
+        pressed &&
+          !disabled &&
+          (destructive
+            ? styles.secondaryButtonPressed
+            : styles.buttonPressed),
         disabled && styles.buttonDisabled,
       ]}>
       <Text
         style={[
           styles.buttonText,
-          destructive && styles.destructiveButtonText,
+          destructive && styles.secondaryButtonText,
         ]}>
         {title}
       </Text>
@@ -455,78 +449,31 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: Spacing.four,
-    paddingBottom: Platform.OS === 'web' ? 112 : Spacing.five,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.three,
+    paddingBottom: Platform.OS === 'web' ? 128 : Spacing.six,
   },
   content: {
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    gap: Spacing.four,
+    gap: Spacing.three,
   },
-  header: {
-    borderRadius: 24,
-    backgroundColor: CotopaxiColors.navy,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.four,
-    gap: Spacing.one,
-    shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
-    borderColor: CotopaxiColors.navy,
-    borderTopColor: CotopaxiColors.white,
-    borderWidth: 1,
-    borderTopWidth: 2,
+  form: {
+    gap: Spacing.three,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  eyebrow: {
-    color: CotopaxiColors.gold,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  focusBadge: {
-    backgroundColor: CotopaxiColors.white,
-    paddingHorizontal: Spacing.one,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  focusBadgeText: {
-    color: CotopaxiColors.navy,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  title: {
-    color: CotopaxiColors.white,
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  headerDescription: {
-    color: CotopaxiColors.white,
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  formCard: {
+  sectionCard: {
     borderColor: CotopaxiColors.border,
-    borderRadius: 28,
+    borderRadius: 20,
     borderWidth: 1,
     backgroundColor: CotopaxiColors.white,
-    padding: Spacing.four,
+    padding: Spacing.three,
     gap: Spacing.three,
     shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 3,
-    borderTopColor: CotopaxiColors.white,
-    borderTopWidth: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
   },
   sectionHeader: {
     gap: Spacing.half,
@@ -541,11 +488,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  divider: {
-    height: 1,
-    backgroundColor: CotopaxiColors.border,
-    marginVertical: Spacing.one,
-  },
   field: {
     gap: Spacing.one,
   },
@@ -557,17 +499,12 @@ const styles = StyleSheet.create({
   inputWrapper: {
     minHeight: 52,
     borderColor: CotopaxiColors.border,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
     backgroundColor: CotopaxiColors.white,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.three,
-    shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
   },
   input: {
     flex: 1,
@@ -577,7 +514,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   inputError: {
-    borderColor: CotopaxiColors.destructive,
+    borderColor: CotopaxiColors.gold,
     backgroundColor: CotopaxiColors.white,
   },
   unitBadge: {
@@ -597,13 +534,15 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     backgroundColor: CotopaxiColors.white,
-    borderColor: CotopaxiColors.destructive,
+    borderColor: CotopaxiColors.gold,
     borderWidth: 1,
-    borderRadius: 24,
+    borderLeftWidth: 3,
+    borderLeftColor: CotopaxiColors.gold,
+    borderRadius: 16,
     padding: Spacing.three,
   },
   errorText: {
-    color: CotopaxiColors.destructive,
+    color: CotopaxiColors.navy,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -619,40 +558,37 @@ const styles = StyleSheet.create({
   },
   button: {
     minHeight: 56,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 28,
+    borderRadius: 18,
     backgroundColor: CotopaxiColors.gold,
     paddingHorizontal: Spacing.four,
     shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    elevation: 3,
-    borderColor: CotopaxiColors.gold,
-    borderTopColor: CotopaxiColors.white,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 5,
+    elevation: 1,
+    borderColor: CotopaxiColors.navy,
     borderWidth: 1,
-    borderTopWidth: 2,
   },
-  destructiveButton: {
-    backgroundColor: CotopaxiColors.destructive,
-    shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 3,
-    borderColor: CotopaxiColors.destructive,
-    borderTopColor: CotopaxiColors.white,
+  secondaryButton: {
+    minHeight: 48,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: CotopaxiColors.navy,
+    paddingHorizontal: Spacing.four,
+    borderColor: CotopaxiColors.navy,
     borderWidth: 1,
-    borderTopWidth: 2,
   },
   buttonPressed: {
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.99 }],
     opacity: 0.9,
   },
-  destructiveButtonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
+  secondaryButtonPressed: {
+    opacity: 0.86,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -662,10 +598,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
   },
-  destructiveButtonText: {
+  secondaryButtonText: {
     color: CotopaxiColors.white,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
   },
   statusContainer: {
     flex: 1,

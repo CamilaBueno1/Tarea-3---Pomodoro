@@ -74,8 +74,17 @@ describe("Pomodoro home screen", () => {
     await render(<HomeScreen />);
 
     expect(screen.getByText("Temporizador Pomodoro")).toBeTruthy();
+    expect(screen.queryByText("FOCUS")).toBeNull();
+    expect(
+      screen.queryByText("Un paso a la vez. Concéntrate en lo que importa."),
+    ).toBeNull();
     expect(screen.getByText("Estudio listo")).toBeTruthy();
     expect(screen.getByText("25:00")).toBeTruthy();
+    expect(screen.getByRole("progressbar").props.accessibilityValue).toEqual({
+      min: 0,
+      max: 100,
+      now: 0,
+    });
     expect(screen.getByText("Pomodoros completados: 1 de 4")).toBeTruthy();
     expect(screen.queryByText(/registro|iniciar sesión/i)).toBeNull();
     expect(
@@ -84,6 +93,17 @@ describe("Pomodoro home screen", () => {
     expect(
       screen.getByRole("button", { name: "Iniciar estudio" }),
     ).toBeTruthy();
+  });
+
+  it("exposes elapsed phase progress to assistive technology", async () => {
+    setTimerState("running", 20 * 60 * 1_000, "20:00");
+    await render(<HomeScreen />);
+
+    expect(screen.getByRole("progressbar").props.accessibilityValue).toEqual({
+      min: 0,
+      max: 100,
+      now: 20,
+    });
   });
 
   it("shows the last phase as completed when the next one is ready", async () => {
@@ -256,10 +276,7 @@ describe("Pomodoro home screen", () => {
         expect.stringContaining("duración inicial"),
         expect.arrayContaining([
           expect.objectContaining({ text: "Cancelar", style: "cancel" }),
-          expect.objectContaining({
-            text: "Reiniciar",
-            style: "destructive",
-          }),
+          expect.objectContaining({ text: "Reiniciar" }),
         ]),
         expect.objectContaining({ cancelable: true }),
       );

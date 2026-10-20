@@ -86,6 +86,10 @@ describe("pomodoro settings screen", () => {
     await render(<SettingsScreen />);
 
     expect(screen.getByText("Ajustes")).toBeTruthy();
+    expect(screen.queryByText("AJUSTES")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Restablecer valores" }),
+    ).toBeTruthy();
 
     const studyInput = screen.getByLabelText(
       "Duración de estudio en minutos",

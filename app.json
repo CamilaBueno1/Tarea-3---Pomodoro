@@ -4,7 +4,7 @@
     "slug": "pomodoro-cotopaxi",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/cotopaxi-logo.jpg",
     "scheme": "pomodorocotopaxi",
     "userInterfaceStyle": "automatic",
     "ios": {

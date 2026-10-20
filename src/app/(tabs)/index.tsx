@@ -13,10 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   CotopaxiColors,
-  Fonts,
   MaxContentWidth,
   Spacing,
 } from '@/constants/theme';
+import { ScreenHeader } from '@/components/screen-header';
+import { ProgressRing } from '@/components/progress-ring';
 import { usePomodoroSession } from '@/hooks/use-pomodoro-session';
 import type { PomodoroPhase } from '@/domain/pomodoro-session';
 
@@ -123,32 +124,29 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         alwaysBounceVertical={false}>
         <View style={styles.content}>
-          {/* Encabezado Institucional */}
-          <View style={styles.header}>
-            <View style={styles.badgeRow}>
-              <Text style={styles.eyebrow}>ACADEMIA COTOPAXI</Text>
-              <View style={styles.focusBadge}>
-                <Text style={styles.focusBadgeText}>FOCUS</Text>
-              </View>
-            </View>
-            <Text style={styles.title}>Temporizador Pomodoro</Text>
-          </View>
+          <ScreenHeader
+            title="Temporizador Pomodoro"
+            variant="plain"
+          />
 
           {/* Tarjeta Principal del Temporizador */}
           <View style={styles.timerCard}>
             {/* Indicador visual de fase actual */}
-            <View
-              style={[
-                styles.phaseBadge,
-                isBreak ? styles.phaseBadgeBreak : styles.phaseBadgeStudy,
-              ]}>
-              <Text
+            <View style={styles.phaseHeader}>
+              <View
                 style={[
-                  styles.phaseName,
-                  isBreak ? styles.phaseNameBreak : styles.phaseNameStudy,
+                  styles.phaseBadge,
+                  isBreak ? styles.phaseBadgeBreak : styles.phaseBadgeStudy,
                 ]}>
-                {phaseNames[session.phase]}
-              </Text>
+                <Text
+                  style={[
+                    styles.phaseName,
+                    isBreak ? styles.phaseNameBreak : styles.phaseNameStudy,
+                  ]}>
+                  {phaseNames[session.phase]}
+                </Text>
+              </View>
+              <View style={styles.phaseAccent} />
             </View>
 
             {/* Mensaje de estado descriptivo */}
@@ -171,28 +169,12 @@ export default function HomeScreen() {
             ) : null}
 
             {/* Display de tiempo restante */}
-            <View style={styles.timeContainer}>
-              <Text
-                accessibilityLabel={`Tiempo restante ${timer.formattedRemainingTime}`}
-                adjustsFontSizeToFit
-                numberOfLines={1}
-                style={styles.time}>
-                {timer.formattedRemainingTime}
-              </Text>
-
-              {/* Barra de progreso de la fase actual */}
-              <View style={styles.progressBarTrack}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    isBreak
-                      ? styles.progressBarFillBreak
-                      : styles.progressBarFillStudy,
-                    { width: `${Math.round(progressRatio * 100)}%` },
-                  ]}
-                />
-              </View>
-            </View>
+            <ProgressRing
+              accessibilityLabel={`Progreso de ${phaseNames[session.phase].toLowerCase()}`}
+              color={isBreak ? CotopaxiColors.success : CotopaxiColors.gold}
+              progress={progressRatio}
+              time={timer.formattedRemainingTime}
+            />
 
             {/* Contador y chips visuales de pomodoros completados en el ciclo */}
             <View style={styles.cycleContainer}>
@@ -281,7 +263,6 @@ export default function HomeScreen() {
                         { text: 'Cancelar', style: 'cancel' },
                         {
                           text: 'Reiniciar',
-                          style: 'destructive',
                           onPress: () => {
                             void timer.restart();
                           },
@@ -344,13 +325,16 @@ function TimerButton({
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
-        destructive ? styles.destructiveButton : styles.button,
-        pressed && (destructive ? styles.destructiveButtonPressed : styles.buttonPressed),
+        destructive ? styles.secondaryButton : styles.button,
+        pressed &&
+          (destructive
+            ? styles.secondaryButtonPressed
+            : styles.buttonPressed),
       ]}>
       <Text
         style={[
           styles.buttonText,
-          destructive && styles.destructiveButtonText,
+          destructive && styles.secondaryButtonText,
         ]}>
         {title}
       </Text>
@@ -365,75 +349,44 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: Spacing.four,
-    paddingBottom: Platform.OS === 'web' ? 112 : Spacing.four,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.three,
+    paddingBottom: Platform.OS === 'web' ? 104 : Spacing.four,
   },
   content: {
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    gap: Spacing.four,
-  },
-  header: {
-    paddingHorizontal: Spacing.one,
-    gap: Spacing.half,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  eyebrow: {
-    color: CotopaxiColors.secondaryText,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  focusBadge: {
-    backgroundColor: CotopaxiColors.gold,
-    paddingHorizontal: Spacing.one,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  focusBadgeText: {
-    color: CotopaxiColors.text,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  title: {
-    color: CotopaxiColors.navy,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    gap: Spacing.three,
   },
   timerCard: {
+    width: '100%',
+    alignSelf: 'center',
     alignItems: 'center',
-    borderRadius: 32,
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
     backgroundColor: CotopaxiColors.white,
-    paddingHorizontal: Spacing.five,
-    paddingVertical: Spacing.five,
-    gap: Spacing.four,
-    borderColor: CotopaxiColors.border,
+    borderRadius: 24,
     borderWidth: 1,
+    borderColor: CotopaxiColors.border,
     shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 4,
-    borderTopColor: CotopaxiColors.white,
-    borderTopWidth: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   phaseBadge: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: 20,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.half,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   phaseBadgeStudy: {
-    backgroundColor: CotopaxiColors.navy,
+    backgroundColor: CotopaxiColors.background,
+    borderColor: CotopaxiColors.navy,
+    borderWidth: 1,
   },
   phaseBadgeBreak: {
     backgroundColor: CotopaxiColors.success,
@@ -445,83 +398,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   phaseNameStudy: {
-    color: CotopaxiColors.white,
+    color: CotopaxiColors.navy,
   },
   phaseNameBreak: {
     color: CotopaxiColors.white,
   },
+  phaseHeader: {
+    width: '100%',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  phaseAccent: {
+    width: 44,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: CotopaxiColors.navy,
+  },
   statusMessage: {
     color: CotopaxiColors.secondaryText,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
   },
   completionNotice: {
     width: '100%',
     alignItems: 'center',
-    gap: Spacing.one,
+    gap: Spacing.half,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    borderRadius: 16,
+    borderRadius: 12,
     backgroundColor: CotopaxiColors.success,
   },
   completionTitle: {
     color: CotopaxiColors.white,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     textAlign: 'center',
   },
   completionMessage: {
     color: CotopaxiColors.white,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  timeContainer: {
-    width: '100%',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  time: {
-    color: CotopaxiColors.navy,
-    fontVariant: ['tabular-nums'],
-    fontFamily: Fonts.mono,
-    fontSize: 88,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  progressBarTrack: {
-    width: '80%',
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: CotopaxiColors.background,
-    overflow: 'hidden',
-    borderColor: CotopaxiColors.border,
-    borderWidth: 1,
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  progressBarFillStudy: {
-    backgroundColor: CotopaxiColors.gold,
-  },
-  progressBarFillBreak: {
-    backgroundColor: CotopaxiColors.success,
   },
   cycleContainer: {
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: Spacing.one,
   },
   progress: {
     color: CotopaxiColors.secondaryText,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
   },
   cycleDots: {
     flexDirection: 'row',
-    gap: Spacing.two,
+    gap: Spacing.three,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -543,103 +475,83 @@ const styles = StyleSheet.create({
     backgroundColor: CotopaxiColors.white,
   },
   noticeBox: {
-    backgroundColor: CotopaxiColors.white,
-    borderColor: CotopaxiColors.border,
-    borderWidth: 1,
-    borderRadius: 24,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
     width: '100%',
-    shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-    borderTopColor: CotopaxiColors.white,
   },
   alertBox: {
     backgroundColor: CotopaxiColors.white,
-    borderColor: CotopaxiColors.destructive,
-    borderWidth: 1,
-    borderRadius: 24,
+    borderRadius: 12,
+    borderLeftColor: CotopaxiColors.gold,
+    borderLeftWidth: 3,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     width: '100%',
-    shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-    borderTopColor: CotopaxiColors.white,
   },
   permissionMessage: {
     color: CotopaxiColors.secondaryText,
-    fontSize: 13,
-    textAlign: 'center',
+    fontSize: 12,
+    textAlign: 'left',
     fontWeight: '500',
   },
   errorMessage: {
-    color: CotopaxiColors.destructive,
+    color: CotopaxiColors.navy,
     fontSize: 13,
     textAlign: 'center',
     fontWeight: '600',
   },
   controls: {
     width: '100%',
-    gap: Spacing.two,
+    gap: Spacing.one,
     marginTop: Spacing.two,
+    paddingTop: Spacing.two,
+    borderTopWidth: 1,
+    borderTopColor: CotopaxiColors.border,
   },
   button: {
-    minHeight: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 30,
-    backgroundColor: CotopaxiColors.gold,
-    paddingHorizontal: Spacing.four,
-    shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    elevation: 4,
-    borderColor: CotopaxiColors.gold,
-    borderTopColor: CotopaxiColors.white,
-    borderWidth: 1,
-    borderTopWidth: 2,
-  },
-  destructiveButton: {
     minHeight: 56,
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 28,
-    backgroundColor: CotopaxiColors.destructive,
-    paddingHorizontal: Spacing.four,
-    shadowColor: CotopaxiColors.navy,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 3,
-    borderColor: CotopaxiColors.destructive,
-    borderTopColor: CotopaxiColors.white,
+    borderRadius: 20,
+    backgroundColor: CotopaxiColors.gold,
+    paddingHorizontal: Spacing.five,
+    borderColor: CotopaxiColors.navy,
     borderWidth: 1,
-    borderTopWidth: 2,
+    shadowColor: CotopaxiColors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  secondaryButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: CotopaxiColors.navy,
+    backgroundColor: CotopaxiColors.navy,
+    paddingHorizontal: Spacing.four,
   },
   buttonPressed: {
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.99 }],
     opacity: 0.9,
   },
-  destructiveButtonPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
+  secondaryButtonPressed: {
+    opacity: 0.86,
   },
   buttonText: {
     color: CotopaxiColors.text,
     fontSize: 18,
     fontWeight: '800',
   },
-  destructiveButtonText: {
+  secondaryButtonText: {
     color: CotopaxiColors.white,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   statusContainer: {
     flex: 1,
