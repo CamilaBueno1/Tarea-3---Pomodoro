@@ -32,10 +32,11 @@ en D-011.
   hora de finalización, EL SISTEMA reconcilia la fase con el tiempo persistido.
   Origen: HU-004, escenario «Aviso con el celular en sonido»; decisiones D-007
   y D-010.
-- **RF-2:** CUANDO termina una fase con la aplicación en segundo plano o
-  cerrada, EL SISTEMA solicita una notificación local de una sola entrega que
-  identifica la fase terminada y solicita sonido y vibración. Origen: HU-004,
-  escenario «Aviso con el celular en sonido»; decisiones D-001 y D-008.
+- **RF-2:** CUANDO termina una fase, EL SISTEMA solicita una notificación local
+  de una sola entrega que identifica la fase terminada y solicita sonido y
+  vibración, incluso si la aplicación está en primer plano. La alarma continua
+  de la pantalla en primer plano es una señal separada. Origen: HU-004,
+  escenario «Aviso con el celular en sonido»; decisiones D-001, D-008 y D-012.
 - **RF-3:** CUANDO el teléfono está en silencio o vibración, EL SISTEMA solicita
   para la notificación una señal con comportamiento de alarma, vibración y
   presentación en la pantalla de bloqueo. EL SISTEMA no garantiza que el
@@ -52,13 +53,12 @@ en D-011.
   SISTEMA explica su propósito y solicita permiso antes de usarlas. Origen:
   HU-004, escenario «Permiso de notificaciones»; decisión D-002.
 - **RF-6:** SI el permiso de notificaciones no está concedido, ENTONCES EL
-  SISTEMA comunica «avisos desactivados» según el permiso consultado al abrir y
-  conserva el funcionamiento del temporizador. CUANDO la aplicación se ejecuta
-  en Android 12 o posterior, EL SISTEMA muestra una indicación general de que
-  «Alarmas y recordatorios» puede ser necesario para reducir retrasos, sin
-  afirmar que el acceso esté concedido o denegado. EL SISTEMA no persiste por
-  separado la elección «Iniciar sin avisos». Origen: HU-004, escenario
-  «Permiso de notificaciones»; decisiones D-002, D-006 y D-009.
+  SISTEMA conserva el funcionamiento del temporizador y explica la opción de
+  permitir avisos o iniciar sin ellos en el diálogo inicial, sin mostrar avisos
+  persistentes en la pantalla del temporizador. EL SISTEMA no persiste por
+  separado la elección «Iniciar sin avisos». Los errores reales de configuración
+  se muestran en un diálogo. Origen: HU-004, escenario «Permiso de
+  notificaciones»; decisiones D-002, D-006 y D-014.
 - **RF-7:** SI EL SISTEMA detecta con certeza que una restricción afecta el
   aviso, ENTONCES informa esa limitación sin afirmar que la señal bloqueada se
   emitió o mostró; SI no puede detectarla con certeza, no la informa ni
@@ -116,6 +116,9 @@ en D-011.
   muestra la pantalla de alarma en primer plano.
 - La acción «Detener» de la notificación sigue mostrando la siguiente fase; no
   equivale a tocar el cuerpo de la notificación.
+- Si la finalización se detecta simultáneamente por el temporizador y por la
+  reanudación de la aplicación, solo se abre una pantalla de alarma y se
+  solicita una notificación.
 - Si la pantalla de alarma se cierra o desmonta, cesan sus señales continuas.
 - El sonido predeterminado de la notificación puede variar por dispositivo; no
   se promete una duración mínima.

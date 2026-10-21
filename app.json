@@ -12,7 +12,11 @@
     },
     "android": {
       "permissions": [
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -48,8 +52,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3f955298-3684-4dac-b90d-5dd096ef9c34"
+        "projectId": "a4aa7766-17a1-4031-8557-7918b4dc25f2"
       }
-    }
+    },
+    "owner": "camilabuenor"
   }
 }

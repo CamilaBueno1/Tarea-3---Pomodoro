@@ -30,6 +30,7 @@ import {
   clearLastStudyNotificationResponse,
   getLastStudyNotificationResponse,
   getStudyNotificationPermission,
+  notifyStudyPhaseCompleted,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
 } from "../storage/study-notifications";
@@ -118,6 +119,7 @@ export function PomodoroSessionProvider({
   const pendingNotificationResponseRef =
     useRef<NotificationResponse | null>(null);
   const initialNotificationResponseCheckedRef = useRef(false);
+  const completedPhaseKeyRef = useRef<string | null>(null);
 
   const persistSession = useCallback(
     async (
@@ -132,6 +134,19 @@ export function PomodoroSessionProvider({
         previousSession?.status === "running" &&
         nextSession.status === "ready" &&
         nextSession.lastCompletedPhase === previousSession.phase;
+      const completedPhaseKey = phaseCompleted
+        ? `${previousSession.phase}:${previousSession.endsAt}`
+        : null;
+
+      if (
+        completedPhaseKey !== null &&
+        completedPhaseKeyRef.current === completedPhaseKey
+      ) {
+        return true;
+      }
+      if (completedPhaseKey !== null) {
+        completedPhaseKeyRef.current = completedPhaseKey;
+      }
 
       if (!phaseCompleted) {
         try {
@@ -144,6 +159,12 @@ export function PomodoroSessionProvider({
       try {
         await saveStudySession(nextSession);
       } catch (saveError: unknown) {
+        if (
+          completedPhaseKey !== null &&
+          completedPhaseKeyRef.current === completedPhaseKey
+        ) {
+          completedPhaseKeyRef.current = null;
+        }
         const visibleError = toError(saveError);
         setError(visibleError);
 
@@ -175,7 +196,15 @@ export function PomodoroSessionProvider({
           openAlarmOnCompletion &&
           previousSession !== null
         ) {
-          router.push({
+          if (notificationsEnabled) {
+            try {
+              await notifyStudyPhaseCompleted(previousSession.phase);
+              setNotificationError(null);
+            } catch (notificationFailure: unknown) {
+              setNotificationError(toError(notificationFailure));
+            }
+          }
+          router.replace({
             pathname: "/alarm",
             params: { phase: previousSession.phase },
           });
@@ -337,7 +366,7 @@ export function PomodoroSessionProvider({
       if (response.actionIdentifier === DEFAULT_NOTIFICATION_ACTION_IDENTIFIER) {
         const phase = getResponsePhase(response);
         if (phase !== null) {
-          router.push({ pathname: "/alarm", params: { phase } });
+          router.replace({ pathname: "/alarm", params: { phase } });
         }
       } else if (response.actionIdentifier === "stop") {
         router.replace("/");

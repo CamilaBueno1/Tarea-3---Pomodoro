@@ -25,6 +25,7 @@ function setTimerState(
   remainingMs: number,
   formattedRemainingTime: string,
   notificationPermissionGranted: boolean | null = true,
+  notificationError: Error | null = null,
 ) {
   const common = {
     phase: "study" as const,
@@ -52,7 +53,7 @@ function setTimerState(
     remainingMs,
     formattedRemainingTime,
     notificationPermissionGranted,
-    notificationError: null,
+    notificationError,
     error: null,
     start: mockStart,
     pause: mockPause,
@@ -185,62 +186,40 @@ describe("Pomodoro home screen", () => {
     expect(mockStart).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the notification-disabled state from the permission status", async () => {
+  it("does not show persistent notification permission or alarm-access notices", async () => {
     setTimerState("ready", 25 * 60 * 1_000, "25:00", false);
+    const originalPlatform = Platform.OS;
+    Platform.OS = "android";
+
+    try {
+      await render(<HomeScreen />);
+
+      expect(screen.queryByText(/Avisos desactivados/)).toBeNull();
+      expect(screen.queryByText(/Alarmas y recordatorios/)).toBeNull();
+    } finally {
+      Platform.OS = originalPlatform;
+    }
+  });
+
+  it("shows notification configuration failures in a dialog instead of inline text", async () => {
+    const notificationError = new Error("No se pudo configurar el canal.");
+    setTimerState(
+      "ready",
+      25 * 60 * 1_000,
+      "25:00",
+      false,
+      notificationError,
+    );
+
     await render(<HomeScreen />);
 
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Error de notificaciones",
+      notificationError.message,
+    );
     expect(
-      screen.getByText(
-        "Avisos desactivados. La cuenta continuará sin notificaciones.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("does not claim notifications are disabled before permission is checked", async () => {
-    setTimerState("ready", 25 * 60 * 1_000, "25:00", null);
-    await render(<HomeScreen />);
-
-    expect(screen.queryByText(/Avisos desactivados/)).toBeNull();
-  });
-
-  it("shows the general exact-alarm access notice on Android 12 and later", async () => {
-    const originalPlatform = Platform.OS;
-    const versionSpy = jest
-      .spyOn(Platform, "Version", "get")
-      .mockReturnValue(31);
-    Platform.OS = "android";
-
-    try {
-      await render(<HomeScreen />);
-
-      expect(
-        screen.getByText(
-          "En Android 12 o posterior, el acceso especial «Alarmas y recordatorios» puede reducir retrasos. Se activa en Ajustes del sistema; la aplicación no puede comprobar si está concedido.",
-        ),
-      ).toBeTruthy();
-    } finally {
-      Platform.OS = originalPlatform;
-      versionSpy.mockRestore();
-    }
-  });
-
-  it("does not show the exact-alarm access notice before Android 12", async () => {
-    const originalPlatform = Platform.OS;
-    const versionSpy = jest
-      .spyOn(Platform, "Version", "get")
-      .mockReturnValue(30);
-    Platform.OS = "android";
-
-    try {
-      await render(<HomeScreen />);
-
-      expect(
-        screen.queryByText(/Alarmas y recordatorios/),
-      ).toBeNull();
-    } finally {
-      Platform.OS = originalPlatform;
-      versionSpy.mockRestore();
-    }
+      screen.queryByText(notificationError.message),
+    ).toBeNull();
   });
 
   it("explains local notifications and allows starting without permission", async () => {

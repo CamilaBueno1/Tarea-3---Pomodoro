@@ -160,17 +160,21 @@ export default function SettingsScreen() {
   }
 
   function updateField(field: SettingsFieldName, value: string) {
-    setValues((currentValues) => ({
-      ...(currentValues ?? toFormValues(settings)),
+    const nextValues = {
+      ...(values ?? toFormValues(settings)),
       [field]: value,
-    }));
-    setFieldErrors((currentErrors) => {
-      if (!(field in currentErrors)) {
-        return currentErrors;
-      }
+    };
+    const validation = validatePomodoroSettings(nextValues);
+    const fieldError = validation.valid ? undefined : validation.errors[field];
 
+    setValues(nextValues);
+    setFieldErrors((currentErrors) => {
       const nextErrors = { ...currentErrors };
-      delete nextErrors[field];
+      if (fieldError) {
+        nextErrors[field] = errorMessage(field, fieldError);
+      } else {
+        delete nextErrors[field];
+      }
       return nextErrors;
     });
     setOperationError(null);

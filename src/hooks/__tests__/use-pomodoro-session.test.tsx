@@ -8,6 +8,7 @@ import {
   clearLastStudyNotificationResponse,
   getLastStudyNotificationResponse,
   getStudyNotificationPermission,
+  notifyStudyPhaseCompleted,
   requestStudyNotificationPermission,
   scheduleStudyEndNotification,
 } from "../../storage/study-notifications";
@@ -42,6 +43,7 @@ jest.mock("../../storage/study-notifications", () => ({
   clearLastStudyNotificationResponse: jest.fn(),
   getLastStudyNotificationResponse: jest.fn(),
   getStudyNotificationPermission: jest.fn(),
+  notifyStudyPhaseCompleted: jest.fn(),
   requestStudyNotificationPermission: jest.fn(),
   scheduleStudyEndNotification: jest.fn(),
 }));
@@ -63,6 +65,7 @@ const mockRequestPermission = jest.mocked(
   requestStudyNotificationPermission,
 );
 const mockScheduleNotification = jest.mocked(scheduleStudyEndNotification);
+const mockNotifyPhaseCompleted = jest.mocked(notifyStudyPhaseCompleted);
 const mockCancelNotification = jest.mocked(cancelStudyEndNotification);
 const mockRouterPush = jest.fn();
 const mockRouterReplace = jest.fn();
@@ -99,6 +102,7 @@ describe("Pomodoro session hook", () => {
     mockAddNotificationResponseListener.mockReturnValue(jest.fn());
     mockRequestPermission.mockResolvedValue(true);
     mockScheduleNotification.mockResolvedValue(undefined);
+    mockNotifyPhaseCompleted.mockResolvedValue(undefined);
     mockCancelNotification.mockResolvedValue(undefined);
     jest.spyOn(Date, "now").mockReturnValue(1_000_000);
   });
@@ -240,10 +244,54 @@ describe("Pomodoro session hook", () => {
         lastCompletedPhase: "study",
       }),
     );
-    expect(mockRouterPush).toHaveBeenCalledWith({
+    expect(mockRouterReplace).toHaveBeenCalledWith({
       pathname: "/alarm",
       params: { phase: "study" },
     });
+    await waitFor(() =>
+      expect(mockNotifyPhaseCompleted).toHaveBeenCalledWith("study"),
+    );
+  });
+
+  it("handles simultaneous timer and foreground completion only once", async () => {
+    const running = startPomodoroSession(
+      createPomodoroSession(settings),
+      1_000_000,
+    );
+    mockLoadSession.mockResolvedValue(running);
+    let handleAppStateChange:
+      | ((state: AppStateStatus) => void)
+      | undefined;
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_eventType, listener) => {
+        handleAppStateChange = listener;
+        return { remove: jest.fn() };
+      });
+    const nowSpy = jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+
+    const { result } = await renderHook(() => usePomodoroSession(), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    jest.useFakeTimers();
+    nowSpy.mockReturnValue(running.endsAt + 5_000);
+    await act(async () => {
+      handleAppStateChange?.("active");
+      await jest.advanceTimersByTimeAsync(1_000);
+    });
+
+    await waitFor(() =>
+      expect(result.current.session).toMatchObject({
+        status: "ready",
+        phase: "shortBreak",
+        lastCompletedPhase: "study",
+      }),
+    );
+    expect(mockSaveSession).toHaveBeenCalledTimes(1);
+    expect(mockNotifyPhaseCompleted).toHaveBeenCalledTimes(1);
+    expect(mockRouterReplace).toHaveBeenCalledTimes(1);
   });
 
   it("opens the alarm route with the completed phase after a body tap while active", async () => {
@@ -299,7 +347,7 @@ describe("Pomodoro session hook", () => {
         lastCompletedPhase: "study",
       }),
     );
-    expect(mockRouterPush).toHaveBeenCalledWith({
+    expect(mockRouterReplace).toHaveBeenCalledWith({
       pathname: "/alarm",
       params: { phase: "study" },
     });
@@ -347,7 +395,7 @@ describe("Pomodoro session hook", () => {
       }),
     );
     await waitFor(() =>
-      expect(mockRouterPush).toHaveBeenCalledWith({
+      expect(mockRouterReplace).toHaveBeenCalledWith({
         pathname: "/alarm",
         params: { phase: "study" },
       }),

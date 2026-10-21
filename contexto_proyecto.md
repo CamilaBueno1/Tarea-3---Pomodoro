@@ -40444,7 +40444,11 @@ CMake Warning in C:/Users/ASUS/Documents/pomodoro-deber/Tarea-3---Pomodoro/node_
     },
     "android": {
       "permissions": [
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -40480,9 +40484,10 @@ CMake Warning in C:/Users/ASUS/Documents/pomodoro-deber/Tarea-3---Pomodoro/node_
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3f955298-3684-4dac-b90d-5dd096ef9c34"
+        "projectId": "a4aa7766-17a1-4031-8557-7918b4dc25f2"
       }
-    }
+    },
+    "owner": "camilabuenor"
   }
 }
 
@@ -40912,11 +40917,10 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - HU-001 a HU-006 están implementadas; el detalle está en `specs/001-*/` a
   `specs/006-*/`. Para HU-004, las decisiones D-001 a D-008 están aceptadas.
   D-009 a D-011 están registradas; spec, plan y tareas de alarma están
-  aprobadas. C16 auditó la entrega sin reproducir un defecto; C17 separa las
-  respuestas de notificación y C18 implementa la pantalla de alarma. C19 añade
-  audio en bucle; C20 agrega vibración repetitiva y pantalla activa; C21 cubre
-  parada y limpieza idempotentes. Jest (136) y TypeScript pasan. La validación
-  física Android está pendiente de C22.
+  aprobadas. C16-C21 implementan auditoría, respuestas diferenciadas y alarma
+  en primer plano; C23 migra el canal Android tras el reporte de aviso ausente.
+  Jest (136) y TypeScript pasan. La entrega y acción «Detener» en dispositivo
+  siguen pendientes de validación manual C22.
 - Se añadió la documentación general del proyecto en `README.md`, con
   descripción, instalación, uso y estructura del repositorio.
 - Expo Router agrupa Temporizador y Ajustes bajo `(tabs)`; las rutas web son
@@ -40935,8 +40939,9 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - (vacío por ahora)
 
 ## Próximos pasos
-- Completar C22 con prueba manual en Expo Go/dispositivo Android. No lanzar
-  build EAS; el usuario generará la APK.
+- Probar C23 y completar C22 en la APK Android: entrega con app en segundo
+  plano/bloqueada y acción «Detener». No lanzar build EAS; el usuario generará
+  la APK.
   Siguiente tarea SDD: `/sdd-implement 004-hu004-notificaciones`.
 
 ================================================
@@ -42868,6 +42873,17 @@ una duración mínima que la API instalada no garantiza.
   registra como bloqueo y no como validación completada. Expo Go no sustituye
   la comprobación del módulo nativo.
   Depende de C16 y C21.
+
+- [x] **C23. Migrar el canal Android tras el reporte de aviso ausente.** RF-1 a RF-4.
+  Hecho cuando: una prueba confirma que se crea un ID nuevo de canal, que el
+  ID del trigger coincide con él y que el ID anterior se elimina como legado.
+  Se conserva la categoría con la acción «Detener». El cambio mitiga la
+  configuración inmutable que Android conserva entre instalaciones; la
+  recepción y la acción en el dispositivo siguen pendientes de validación
+  manual en C22.
+  Resultado: `studyend8` reemplaza `studyend7`; las pruebas del adaptador
+  verifican migración, programación y acción «Detener». Jest completo (136) y
+  TypeScript pasan. No se generó APK ni se afirmó entrega física.
 
 
 ================================================
@@ -47605,7 +47621,7 @@ type NotificationPermissionsStatus =
   import("expo-notifications").NotificationPermissionsStatus;
 
 const STUDY_END_NOTIFICATION_ID_KEY = "@cotopaxi/study-end-notification-id";
-const STUDY_NOTIFICATION_CHANNEL_ID = "studyend7";
+const STUDY_NOTIFICATION_CHANNEL_ID = "studyend8";
 const LEGACY_STUDY_NOTIFICATION_CHANNEL_IDS = [
   "default",
   "studyend",
@@ -47614,6 +47630,7 @@ const LEGACY_STUDY_NOTIFICATION_CHANNEL_IDS = [
   "studyend4",
   "studyend5",
   "studyend6",
+  "studyend7",
 ];
 const STUDY_NOTIFICATION_CATEGORY_ID = "studyend";
 const STUDY_NOTIFICATION_STOP_ACTION_ID = "stop";

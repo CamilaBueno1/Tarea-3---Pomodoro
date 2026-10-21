@@ -392,3 +392,40 @@ una duración mínima que la API instalada no garantiza.
   Resultado: `studyend8` reemplaza `studyend7`; las pruebas del adaptador
   verifican migración, programación y acción «Detener». Jest completo (136) y
   TypeScript pasan. No se generó APK ni se afirmó entrega física.
+
+- [x] **C24. Mostrar una notificación al completar en primer plano.** RF-2, RF-4.
+  Hecho cuando: la finalización con la app activa solicita una notificación
+  que identifica la fase y conserva la acción «Detener», reemplaza el aviso
+  pendiente de esa fase y usa el canal Android versionado en vez del canal
+  fallback. No altera la pantalla/sonido de alarma.
+  Resultado: la ruta de finalización activa invoca el adaptador; el aviso usa
+  un trigger de un segundo asociado a `studyend8` para que Android presente la
+  notificación en el canal configurado. Pruebas focalizadas, Jest completo y
+  TypeScript pasan. La presentación efectiva requiere validación en APK.
+
+- [x] **C25. Evitar alarmas duplicadas y retirar avisos persistentes de la interfaz.** RF-2, RF-6, RF-8 a RF-10.
+  Hecho cuando: Jest reproduce la finalización concurrente por timer y
+  reanudación y verifica una sola persistencia, aviso y ruta; tocar notificación
+  o completar en primer plano reemplaza la ruta para no apilar alarmas. La
+  notificación inmediata usa el canal de alarma configurado. La pantalla
+  principal no muestra mensajes persistentes de permisos o alarma exacta; los
+  errores reales permanecen visibles en un diálogo y se conserva la explicación
+  de permiso al iniciar.
+  Resultado: pruebas reprodujeron la doble ruta; un guard por fase vencida
+  evita procesar dos veces la misma finalización. La notificación de primer
+  plano se agenda con canal explícito y «Detener» sigue usando la ruta existente.
+  Se eliminaron los avisos persistentes indicados y los errores de configuración
+  ahora se muestran en un diálogo. Jest completo y TypeScript pasan; la
+  comprobación física de entrega y parada queda pendiente en C22.
+
+- [x] **C26. Hacer portable la configuración del canal en APK EAS.** RF-1 a RF-3.
+  Hecho cuando: las pruebas verifican que el canal nuevo y la eliminación de
+  canales anteriores usan APIs de `expo-notifications` SDK 57, sin requerir
+  módulos nativos locales que no se incluyan al generar el proyecto Android
+  desde Git. La programación conserva el mismo ID de canal. Jest y TypeScript
+  pasan.
+  Resultado: el error del APK se atribuía a `NativeModules.StudyAlarmChannel`,
+  definido solo en `android/` (ignorado por Git). Se sustituyó por
+  `deleteNotificationChannelAsync` y `setNotificationChannelAsync`, con MAX,
+  sonido predeterminado, audio ALARM, vibración y visibilidad pública. Pruebas
+  focalizadas y TypeScript pasan. La nueva APK requiere validación manual C22.

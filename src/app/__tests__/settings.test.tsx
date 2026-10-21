@@ -153,6 +153,29 @@ describe("pomodoro settings screen", () => {
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
+  it("shows and clears a field validation error as the value changes", async () => {
+    await render(<SettingsScreen />);
+
+    const studyInput = screen.getByLabelText(
+      "Duración de estudio en minutos",
+    );
+    expect(screen.queryByText("Ingresa entre 1 y 120 minutos.")).toBeNull();
+
+    await fireEvent.changeText(studyInput, "121");
+
+    expect(
+      screen.getByText("Ingresa entre 1 y 120 minutos."),
+    ).toBeTruthy();
+    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(studyInput, "60");
+
+    expect(
+      screen.queryByText("Ingresa entre 1 y 120 minutos."),
+    ).toBeNull();
+  });
+
   it("requests confirmation before saving valid changes", async () => {
     await render(<SettingsScreen />);
 

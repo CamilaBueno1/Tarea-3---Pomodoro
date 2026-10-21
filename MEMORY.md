@@ -5,10 +5,14 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - HU-001 a HU-006 están implementadas; el detalle está en `specs/001-*/` a
   `specs/006-*/`. Para HU-004, las decisiones D-001 a D-008 están aceptadas.
   D-009 a D-011 están registradas; spec, plan y tareas de alarma están
-  aprobadas. C16-C21 implementan auditoría, respuestas diferenciadas y alarma
-  en primer plano; C23 migra el canal Android tras el reporte de aviso ausente.
-  Jest (136) y TypeScript pasan. La entrega y acción «Detener» en dispositivo
-  siguen pendientes de validación manual C22.
+  aprobadas. D-012-D-014 registran notificación en primer plano, protección
+  contra duplicados y retirada de avisos persistentes. C16-C21 implementan
+  respuestas diferenciadas y alarma en primer plano; C23 migra el canal Android,
+  C24 añade el aviso en primer plano y C25 evita alarmas duplicadas y retira
+  avisos persistentes; C26 configura el canal mediante APIs Expo incluidas en
+  EAS, corrigiendo la dependencia nativa local. Jest y TypeScript pasan. La
+  APK nueva y acción «Detener» requieren validación manual C22. El formulario
+  de Ajustes valida cada campo al editarlo y al guardar.
 - Se añadió la documentación general del proyecto en `README.md`, con
   descripción, instalación, uso y estructura del repositorio.
 - Expo Router agrupa Temporizador y Ajustes bajo `(tabs)`; las rutas web son
@@ -27,7 +31,6 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas.
 - (vacío por ahora)
 
 ## Próximos pasos
-- Probar C23 y completar C22 en la APK Android: entrega con app en segundo
-  plano/bloqueada y acción «Detener». No lanzar build EAS; el usuario generará
-  la APK.
+- Validar C26/C22 instalando una APK EAS nueva: canal, entrega de notificación,
+  alarma única y acción «Detener». El usuario generará la APK.
   Siguiente tarea SDD: `/sdd-implement 004-hu004-notificaciones`.

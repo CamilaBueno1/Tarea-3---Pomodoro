@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-import { NativeModules, Platform } from "react-native";
+import { Platform } from "react-native";
 
 import type { PomodoroPhase } from "../domain/pomodoro-session";
 
@@ -27,25 +27,6 @@ let notificationsModulePromise: Promise<NotificationsModule | null> | null =
   null;
 
 type NotificationResponse = import("expo-notifications").NotificationResponse;
-type NativeAlarmChannelModule = {
-  configure: (
-    channelId: string,
-    legacyChannelIds: string[],
-    vibrationPattern: number[],
-  ) => Promise<void>;
-};
-
-function isNativeAlarmChannelModule(
-  value: unknown,
-): value is NativeAlarmChannelModule {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "configure" in value &&
-    typeof value.configure === "function"
-  );
-}
-
 const phaseMessages: Record<PomodoroPhase, { title: string; body: string }> = {
   study: {
     title: "Tiempo de estudio terminado",
@@ -92,22 +73,33 @@ function loadNotificationsModule(): Promise<NotificationsModule | null> {
   return notificationsModulePromise;
 }
 
-async function configureAndroidChannel(): Promise<void> {
+async function configureAndroidChannel(
+  notifications: NotificationsModule,
+): Promise<void> {
   if (Platform.OS !== "android") {
     return;
   }
 
-  const nativeModule: unknown = NativeModules.StudyAlarmChannel;
-  if (!isNativeAlarmChannelModule(nativeModule)) {
-    throw new Error(
-      "No se pudo configurar el canal de alarma. Instala la versión Android completa de la aplicación.",
-    );
+  for (const legacyChannelId of LEGACY_STUDY_NOTIFICATION_CHANNEL_IDS) {
+    await notifications.deleteNotificationChannelAsync(legacyChannelId);
   }
 
-  await nativeModule.configure(
+  await notifications.setNotificationChannelAsync(
     STUDY_NOTIFICATION_CHANNEL_ID,
-    LEGACY_STUDY_NOTIFICATION_CHANNEL_IDS,
-    STUDY_NOTIFICATION_VIBRATION_PATTERN,
+    {
+      name: "Aviso de fin de fase",
+      description: "Alarma sonora y vibración al terminar una fase Pomodoro",
+      importance: notifications.AndroidImportance.MAX,
+      sound: "default",
+      audioAttributes: {
+        usage: notifications.AndroidAudioUsage.ALARM,
+        contentType: notifications.AndroidAudioContentType.SONIFICATION,
+      },
+      vibrationPattern: STUDY_NOTIFICATION_VIBRATION_PATTERN,
+      enableVibrate: true,
+      lockscreenVisibility:
+        notifications.AndroidNotificationVisibility.PUBLIC,
+    },
   );
 }
 
@@ -129,7 +121,7 @@ async function configureStudyNotificationCategory(
 async function configureNotificationPresentation(
   notifications: NotificationsModule,
 ): Promise<void> {
-  await configureAndroidChannel();
+  await configureAndroidChannel(notifications);
   await configureStudyNotificationCategory(notifications);
 }
 
@@ -270,23 +262,37 @@ export async function scheduleStudyEndNotification(
   }
 }
 
-export async function notifyStudyPhaseCompleted(): Promise<void> {
+export async function notifyStudyPhaseCompleted(
+  phase: PomodoroPhase,
+): Promise<void> {
+  await cancelStudyEndNotification();
+
   const notifications = await loadNotificationsModule();
   if (notifications === null) {
     return;
   }
 
-  await configureAndroidChannel();
-  await notifications.cancelAllScheduledNotificationsAsync();
+  await configureAndroidChannel(notifications);
+  await configureStudyNotificationCategory(notifications);
+  const message = phaseMessages[phase];
   await notifications.scheduleNotificationAsync({
     content: {
-      title: "¡Tiempo finalizado!",
-      body: "Tu sesión ha concluido.",
-      sound: true,
+      title: message.title,
+      body: message.body,
+      data: { phase },
+      sound: "default",
       vibrate: STUDY_NOTIFICATION_VIBRATION_PATTERN,
       priority: notifications.AndroidNotificationPriority.MAX,
+      categoryIdentifier: STUDY_NOTIFICATION_CATEGORY_ID,
     },
-    trigger: null,
+    trigger: {
+      type: notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 1,
+      repeats: false,
+      ...(Platform.OS === "android"
+        ? { channelId: STUDY_NOTIFICATION_CHANNEL_ID }
+        : {}),
+    },
   });
 }
 

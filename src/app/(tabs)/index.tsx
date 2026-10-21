@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,6 +32,15 @@ export default function HomeScreen() {
   const [hasExplainedNotificationPermission, setHasExplainedNotificationPermission] =
     useState(false);
 
+  useEffect(() => {
+    if (timer.notificationError) {
+      Alert.alert(
+        'Error de notificaciones',
+        timer.notificationError.message,
+      );
+    }
+  }, [timer.notificationError]);
+
   if (timer.status === 'loading') {
     return <StatusMessage message="Cargando tu sesión…" />;
   }
@@ -56,8 +65,6 @@ export default function HomeScreen() {
         : `${phaseNames[session.phase]} pausado`;
 
   const isBreak = session.phase === 'shortBreak' || session.phase === 'longBreak';
-  const shouldShowExactAlarmNotice =
-    Platform.OS === 'android' && Number(Platform.Version) >= 31;
   const progressRatio =
     session.initialDurationMs > 0
       ? Math.min(1, Math.max(0, 1 - timer.remainingMs / session.initialDurationMs))
@@ -193,31 +200,6 @@ export default function HomeScreen() {
                 </Text>
               </View>
             ) : null}
-            {timer.notificationError ? (
-              <View style={styles.alertBox}>
-                <Text accessibilityRole="alert" style={styles.errorMessage}>
-                  {timer.notificationError.message}
-                </Text>
-              </View>
-            ) : null}
-            {timer.notificationPermissionGranted === false ? (
-              <View style={styles.noticeBox}>
-                <Text style={styles.permissionMessage}>
-                  Avisos desactivados. La cuenta continuará sin notificaciones.
-                </Text>
-              </View>
-            ) : null}
-            {shouldShowExactAlarmNotice ? (
-              <View style={styles.noticeBox}>
-                <Text style={styles.permissionMessage}>
-                  En Android 12 o posterior, el acceso especial «Alarmas y
-                  recordatorios» puede reducir retrasos. Se activa en Ajustes
-                  del sistema; la aplicación no puede comprobar si está
-                  concedido.
-                </Text>
-              </View>
-            ) : null}
-
             {/* Botones de control */}
             <View style={styles.controls}>
               {session.status === 'ready' ? (
@@ -465,11 +447,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     backgroundColor: CotopaxiColors.white,
   },
-  noticeBox: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    width: '100%',
-  },
   alertBox: {
     backgroundColor: CotopaxiColors.white,
     borderRadius: 12,
@@ -478,12 +455,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     width: '100%',
-  },
-  permissionMessage: {
-    color: CotopaxiColors.secondaryText,
-    fontSize: 12,
-    textAlign: 'left',
-    fontWeight: '500',
   },
   errorMessage: {
     color: CotopaxiColors.navy,

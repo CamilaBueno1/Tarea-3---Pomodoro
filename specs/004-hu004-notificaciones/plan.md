@@ -16,12 +16,13 @@ documentada en D-011.
 
 | HU / decisión | RF | Diseño previsto | Pruebas y validación |
 | --- | --- | --- | --- |
-| HU-004, «Aviso con el celular en sonido»; D-007, D-010 | RF-1, RF-2 | Mantener una notificación local para la hora persistida de fin; verificar programación, permiso exact-alarm y entrega única. | Jest de fecha, canal, permisos, programación/cancelación; manifiesto generado y prueba en Android. |
+| HU-004, «Aviso con el celular en sonido»; D-007, D-010, D-012 | RF-1, RF-2 | Mantener la notificación para la hora persistida y solicitar también la notificación cuando la app activa termina una fase; en Android ambas usan el canal versionado. | Jest de fecha, canal, permisos, programación/cancelación y finalización activa; manifiesto generado y prueba en Android. |
 | HU-004, «Aviso con el celular en silencio»; D-001, D-008 | RF-2, RF-3, RF-7 | Solicitar configuración de sonido/vibración y presentación en bloqueo; no afirmar que el sistema la respeta ni añadir bypass de No molestar. | Jest verifica opciones solicitadas; Android registra comportamiento efectivo y restricciones. |
 | HU-004, «Detener el aviso»; D-005, D-011 | RF-4, RF-8, RF-10 | Separar el toque del cuerpo (pantalla de alarma) de la acción «Detener» de la notificación (siguiente fase); el botón de la pantalla de alarma también pasa a la siguiente fase. | Jest distingue `actionIdentifier` de toque normal y cubre navegación, parada y fase mostrada; Android valida toque en app fría y activa. |
-| HU-004, «Permiso de notificaciones»; D-002, D-006, D-009 | RF-5, RF-6 | Reutilizar explicación, permiso consultado y mensajes existentes; no guardar la elección; mantener información general de alarmas exactas. | Jest de permisos concedidos/denegados y mensajes; revisión manual en Android. |
+| HU-004, «Permiso de notificaciones»; D-002, D-006, D-014 | RF-5, RF-6 | Conservar el diálogo de permiso al iniciar; no mostrar avisos persistentes de permisos/alarmas en el temporizador; presentar errores efectivos en diálogo y no guardar la elección. | Jest de permisos y ausencia de textos persistentes; revisión manual en Android. |
 | Adición aprobada del cliente | RF-8, RF-9, RF-10 | Ruta de alarma en Expo Router; controlador de señales con audio, vibración y pantalla activa, limitado a la vida de esa pantalla. | Jest de UI y ciclo de vida; dispositivo verifica señales en primer plano y limpieza al cerrar/desmontar. |
 | D-001, D-002, D-007 | RF-1, RF-6, RF-7 | El estado de sesión y su tiempo persistido son la fuente de verdad; entrega de notificación no altera por sí sola el conteo. | Jest de reconciliación/restauración; regreso a la app en Android tras demora. |
+| D-013 | RF-8 a RF-10 | Serializar la finalización detectada por el timer y reanudación para abrir una sola ruta y una sola alarma. | Jest de finalización concurrente y limpieza al detener. |
 
 ## Auditoría de regresión inicial
 
@@ -44,13 +45,12 @@ plan no les atribuye causas particulares. El alcance de la auditoría es:
    cerrada o dispositivo bloqueado.
 
 La auditoría revisa como mínimo `app.json`,
-`android/app/src/main/AndroidManifest.xml`,
-`android/app/src/main/java/com/anonymous/pomodorocotopaxi/StudyAlarmChannelModule.kt`,
-`src/storage/study-notifications.ts`, `src/hooks/use-pomodoro-session.tsx` y
-sus pruebas existentes. El canal `studyend7` y el módulo Android nativo ya
-forman parte del estado del proyecto; se verificará su estado real en fuentes
-y artefactos en vez de presumir una causa. No se instalarán servicios ni se
-ampliarán permisos para la auditoría.
+`android/app/src/main/AndroidManifest.xml`, `src/storage/study-notifications.ts`,
+`src/hooks/use-pomodoro-session.tsx` y sus pruebas existentes. La configuración
+del canal debe ser reproducible desde los archivos versionados y APIs Expo
+incluidas en el build; no dependerá de modificaciones locales a `android/`,
+carpeta ignorada por Git. No se instalarán servicios ni se ampliarán permisos
+para la auditoría.
 
 ## Archivos y responsabilidades
 
@@ -59,7 +59,7 @@ ampliarán permisos para la auditoría.
 | `src/domain/pomodoro-session.ts` (existente) | Mantener las transiciones puras existentes y el cálculo basado en el tiempo absoluto. No agregar una transición disparada por la notificación. | RF-1, RF-7, RF-10 |
 | `src/domain/__tests__/pomodoro-session.test.ts` (existente) | Conservar pruebas de vencimiento y fase siguiente; ampliar solo si la auditoría encuentra un defecto de dominio reproducible. | RF-1, RF-7, RF-10 |
 | `app.json` y `android/app/src/main/AndroidManifest.xml` (existentes) | Comprobar la declaración `SCHEDULE_EXACT_ALARM`, permisos fusionados y configuración Expo; no añadir permisos de servicio en primer plano ni de pantalla completa. | RF-1, RF-6 |
-| `android/app/src/main/java/com/anonymous/pomodorocotopaxi/StudyAlarmChannelModule.kt` (existente) | Auditar creación/lectura del canal Android y migración desde canales previos. Cambiar únicamente si la regresión se confirma y la corrección respeta la spec. | RF-1, RF-2, RF-3 |
+| `src/storage/study-notifications.ts` (existente) | Configurar y migrar el canal mediante las APIs Android expuestas por `expo-notifications`, disponibles en el build EAS y tipadas en SDK 57. | RF-1 a RF-3 |
 | `src/storage/study-notifications.ts` (existente) | Mantener configuración y programación local; exponer la diferencia entre toque normal y acción «Detener» sin navegar desde la capa de almacenamiento. Revisar canal y cancelación. | RF-1 a RF-7 |
 | `src/storage/__tests__/study-notifications.test.ts` (existente) | Cubrir permisos, canal, fecha, cancelación y respuestas diferenciadas, verificando lo solicitado a la API y no el comportamiento que solo controla el SO. | RF-1 a RF-7 |
 | `src/hooks/use-pomodoro-session.tsx` (existente) | Coordinar estado persistido, vencimiento, reconciliación y respuestas de notificación; trasladar al nivel de interfaz el destino distinto de cada respuesta. | RF-1, RF-4 a RF-7, RF-10 |
@@ -152,16 +152,16 @@ inferida a partir de la respuesta.
 - Verificar documentación y tipos de `expo-audio`/`expo-keep-awake` compatibles
   con Expo SDK 57 al crear las tareas. El audio debe poder repetirse y detenerse
   al desmontar sin mantener recursos abiertos.
-- El módulo nativo de canal de alarmas ya existe. La notificación local y el
-  manifiesto se validan en APK/dev build Android; Expo Go no sustituye la
-  validación del módulo nativo del proyecto.
+- La configuración del canal usa las APIs Android de `expo-notifications`.
+  La notificación local y el manifiesto se validan en APK/dev build Android;
+  Expo Go no sustituye la validación nativa del build.
 
 ## Opciones y alternativas
 
 | Opción prevista | RF | Alternativa descartada y motivo |
 | --- | --- | --- |
 | Resolver la regresión primero con una auditoría acotada y corregir solo el defecto probado, con prueba Jest y evidencia reproducible. | RF-1 a RF-3, RF-7 | Atribuir causas concretas a las hipótesis «a-d» no disponibles o cambiar permisos/canales por conjetura. |
-| Mantener notificación local única para fondo/cierre y alarma propia solo cuando la app presenta la ruta de alarma. | RF-2 a RF-4, RF-8, RF-9 | Ejecutar alarma JavaScript indefinidamente con la app cerrada; no es una garantía de la plataforma. |
+| Mantener una notificación local de una sola entrega tanto al terminar en primer plano como en segundo plano/cierre; mostrar además la alarma propia solo con la ruta visible. | RF-2 a RF-4, RF-8, RF-9, D-012 | Ejecutar alarma JavaScript indefinidamente con la app cerrada; no es una garantía de la plataforma. |
 | Usar una ruta de alarma de Expo Router y distinguir toque normal de acción explícita mediante la respuesta identificada por la API instalada. | RF-4, RF-8, RF-10 | Tratar cuerpo y acción «Detener» como equivalentes; contradice D-011. |
 | Usar `expo-audio` para reproducir en bucle el asset original aprobado, `expo-keep-awake` durante la ruta y `Vibration` para repetición/cancelación. | RF-9, RF-10 | Usar solo el sonido de canal, que no garantiza continuidad; o mantener dependencias nativas alternativas sin aprobación. |
 | Conservar `endsAt`, AsyncStorage y la transición de dominio actual. | RF-1, RF-7, RF-10 | Agregar persistencia de alarma o cambiar formato de sesión sin necesidad funcional. |

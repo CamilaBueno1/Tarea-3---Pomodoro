@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { PermissionStatus } from "expo-modules-core";
-import { NativeModules, Platform } from "react-native";
+import { Platform } from "react-native";
 
 import appConfig from "../../../app.json";
 
@@ -35,10 +35,19 @@ jest.mock("expo-constants", () => ({
 jest.mock("expo-notifications", () => ({
   __esModule: true,
   AndroidNotificationPriority: { MAX: "max" },
-  SchedulableTriggerInputTypes: { DATE: "date" },
+  AndroidImportance: { MAX: 7 },
+  AndroidNotificationVisibility: { PUBLIC: 1 },
+  AndroidAudioUsage: { ALARM: 4 },
+  AndroidAudioContentType: { SONIFICATION: 4 },
+  SchedulableTriggerInputTypes: {
+    DATE: "date",
+    TIME_INTERVAL: "timeInterval",
+  },
   DEFAULT_ACTION_IDENTIFIER: "expo.modules.notifications.actions.DEFAULT",
   setNotificationHandler: jest.fn(),
   setNotificationCategoryAsync: jest.fn().mockResolvedValue(undefined),
+  setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+  deleteNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
   cancelAllScheduledNotificationsAsync: jest.fn(),
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
@@ -63,7 +72,12 @@ const mockScheduleNotification = jest.mocked(
 const mockSetNotificationHandler = jest.mocked(
   Notifications.setNotificationHandler,
 );
-const mockConfigureNativeAlarmChannel = jest.fn();
+const mockSetNotificationChannel = jest.mocked(
+  Notifications.setNotificationChannelAsync,
+);
+const mockDeleteNotificationChannel = jest.mocked(
+  Notifications.deleteNotificationChannelAsync,
+);
 const mockSetNotificationCategory = jest.mocked(
   Notifications.setNotificationCategoryAsync,
 );
@@ -89,10 +103,8 @@ const mockDismissNotification = jest.mocked(
 describe("study end notifications", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    NativeModules.StudyAlarmChannel = {
-      configure: mockConfigureNativeAlarmChannel,
-    };
-    mockConfigureNativeAlarmChannel.mockResolvedValue(undefined);
+    mockSetNotificationChannel.mockResolvedValue(null);
+    mockDeleteNotificationChannel.mockResolvedValue(undefined);
     mockGetItem.mockResolvedValue(null);
     mockSetItem.mockResolvedValue(undefined);
     mockRemoveItem.mockResolvedValue(undefined);
@@ -184,7 +196,7 @@ describe("study end notifications", () => {
     try {
       await expect(requestStudyNotificationPermission()).resolves.toBe(true);
 
-      expect(mockConfigureNativeAlarmChannel.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(mockSetNotificationChannel.mock.invocationCallOrder[0]).toBeLessThan(
         mockRequestPermissions.mock.invocationCallOrder[0],
       );
     } finally {
@@ -192,27 +204,32 @@ describe("study end notifications", () => {
     }
   });
 
-  it("configures the native alarm channel before permission is requested", async () => {
+  it("configures and migrates the alarm channel before permission is requested", async () => {
     const originalPlatform = Platform.OS;
     Platform.OS = "android";
 
     try {
       await configureStudyNotifications();
 
-      expect(mockConfigureNativeAlarmChannel).toHaveBeenCalledWith(
-        "studyend8",
-        [
-          "default",
-          "studyend",
-          "studyend2",
-          "studyend3",
-          "studyend4",
-          "studyend5",
-          "studyend6",
-          "studyend7",
-        ],
-        [0, 250, 250, 250],
-      );
+      expect(mockDeleteNotificationChannel).toHaveBeenCalledTimes(8);
+      expect(mockDeleteNotificationChannel).toHaveBeenNthCalledWith(1, "default");
+      expect(mockDeleteNotificationChannel).toHaveBeenLastCalledWith("studyend7");
+      expect(mockSetNotificationChannel).toHaveBeenCalledWith("studyend8", {
+        name: "Aviso de fin de fase",
+        description: "Alarma sonora y vibración al terminar una fase Pomodoro",
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+        audioAttributes: {
+          usage: Notifications.AndroidAudioUsage.ALARM,
+          contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+        },
+        vibrationPattern: [0, 250, 250, 250],
+        enableVibrate: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+      expect(
+        mockDeleteNotificationChannel.mock.invocationCallOrder[7],
+      ).toBeLessThan(mockSetNotificationChannel.mock.invocationCallOrder[0]);
     } finally {
       Platform.OS = originalPlatform;
     }
@@ -304,22 +321,8 @@ describe("study end notifications", () => {
         },
       });
       expect(
-        mockConfigureNativeAlarmChannel.mock.invocationCallOrder[0],
+        mockSetNotificationChannel.mock.invocationCallOrder[0],
       ).toBeLessThan(mockScheduleNotification.mock.invocationCallOrder[0]);
-      expect(mockConfigureNativeAlarmChannel).toHaveBeenCalledWith(
-        "studyend8",
-        [
-          "default",
-          "studyend",
-          "studyend2",
-          "studyend3",
-          "studyend4",
-          "studyend5",
-          "studyend6",
-          "studyend7",
-        ],
-        [0, 250, 250, 250],
-      );
       expect(mockSetNotificationCategory).toHaveBeenCalledWith(
         "studyend",
         expect.any(Array),
@@ -334,21 +337,36 @@ describe("study end notifications", () => {
   });
 
   it("sends an immediate notification when a phase completes", async () => {
-    await notifyStudyPhaseCompleted();
+    const originalPlatform = Platform.OS;
+    Platform.OS = "android";
 
-    expect(mockCancelAllScheduledNotifications).toHaveBeenCalledTimes(1);
-    expect(mockCancelAllScheduledNotifications.mock.invocationCallOrder[0])
-      .toBeLessThan(mockScheduleNotification.mock.invocationCallOrder[0]);
-    expect(mockScheduleNotification).toHaveBeenCalledWith({
-      content: {
-        title: "¡Tiempo finalizado!",
-        body: "Tu sesión ha concluido.",
-        sound: true,
-        vibrate: [0, 250, 250, 250],
-        priority: Notifications.AndroidNotificationPriority.MAX,
-      },
-      trigger: null,
-    });
+    try {
+      await notifyStudyPhaseCompleted("study");
+
+      expect(mockScheduleNotification).toHaveBeenCalledWith({
+        content: {
+          title: "Tiempo de estudio terminado",
+          body: "Tu tiempo de estudio terminó. Puedes iniciar un descanso.",
+          data: { phase: "study" },
+          sound: "default",
+          vibrate: [0, 250, 250, 250],
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          categoryIdentifier: "studyend",
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 1,
+          repeats: false,
+          channelId: "studyend8",
+        },
+      });
+      expect(mockSetNotificationCategory).toHaveBeenCalledWith(
+        "studyend",
+        expect.any(Array),
+      );
+    } finally {
+      Platform.OS = originalPlatform;
+    }
   });
 
   it("replaces and cancels only the scheduled study notification", async () => {

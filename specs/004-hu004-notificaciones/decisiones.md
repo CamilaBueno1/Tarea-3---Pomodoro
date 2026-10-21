@@ -30,12 +30,13 @@ comprobarlo.
 **Estado:** Aceptada.
 
 La aplicación informa únicamente las limitaciones que puede detectar con
-certeza. Si el permiso de notificaciones no está concedido, muestra en la
-pantalla principal el mensaje de avisos desactivados, desde que el estudiante
-decide no permitirlos y mientras el permiso siga sin concederse. Cuando el
-estudiante vuelve a la aplicación tras un aviso que no se mostró, la fase aparece
-como terminada según el tiempo de finalización persistido, de modo que la
-información no se pierde.
+certeza. Si el permiso de notificaciones no está concedido, conserva el
+temporizador y explica la opción de permitir avisos o iniciar sin ellos en el
+diálogo inicial; no mantiene un mensaje de estado persistente en la pantalla
+principal. Los errores efectivos de configuración se presentan en un diálogo.
+Cuando el estudiante vuelve a la aplicación tras un aviso que no se mostró, la
+fase aparece como terminada según el tiempo de finalización persistido, de modo
+que la información no se pierde.
 
 La aplicación no detecta restricciones que no puede conocer (silencio, No
 molestar o ahorro de batería del fabricante), por lo tanto no las informa ni
@@ -123,14 +124,11 @@ segundo plano repita su sonido. Las respuestas a la notificación siguen D-005.
 
 ## D-009: Información general sobre alarmas exactas
 
-**Estado:** Aceptada.
+**Estado:** Reemplazada por D-014.
 
-En Android 12 o posterior, la pantalla principal muestra siempre una indicación
-general de que el acceso «Alarmas y recordatorios» puede ser necesario para
-reducir retrasos. Se muestra aunque el acceso ya esté concedido, porque
-`expo-notifications` no expone su estado a JavaScript. La indicación no afirma
-que el acceso esté denegado. No se añaden pantallas, dependencias ni
-persistencia.
+La decisión de mostrar una indicación general sobre «Alarmas y recordatorios»
+se reemplaza por la decisión del cliente de no mostrar avisos informativos
+persistentes en la pantalla principal.
 
 ## D-010: Permiso de alarma exacta seleccionado
 
@@ -157,3 +155,32 @@ el escenario «Detener el aviso» de HU-004 respecto al toque de la notificació
 HU-004 permanece intacta como línea base histórica; la spec aprobada y esta
 decisión documentan la conducta vigente. No se promete una apertura automática
 de la alarma con la aplicación cerrada o el teléfono bloqueado.
+
+## D-012: Notificación además de la alarma en primer plano
+
+**Estado:** Aceptada.
+
+Cuando una fase termina con la aplicación en primer plano, el sistema solicita
+la notificación de fin de fase además de mostrar la pantalla de alarma. La
+notificación identifica la fase, se asocia al canal configurado y conserva la
+acción «Detener». La alarma continua de la pantalla es independiente de la
+entrega única del sistema.
+
+## D-013: Una sola alarma por finalización
+
+**Estado:** Aceptada.
+
+Si el intervalo del temporizador y el evento de reanudación detectan la misma
+finalización concurrentemente, el sistema procesa esa fase una sola vez y no
+apila rutas de alarma. La acción «Detener» de la pantalla o de la notificación
+debe cerrar la única alarma activa.
+
+## D-014: Sin avisos informativos persistentes en el temporizador
+
+**Estado:** Aceptada.
+
+Por solicitud del cliente, la pantalla principal no muestra mensajes
+persistentes de avisos desactivados ni la indicación general de «Alarmas y
+recordatorios». Se mantiene el diálogo de explicación y permiso al iniciar
+cuando corresponde (RF-5); los errores reales de configuración se presentan en
+un diálogo y no como texto fijo junto al control «Iniciar».
